@@ -1,0 +1,12 @@
+#game-container {
+  text-align: center;
+}
+
+#game-container canvas {
+  margin: 30px auto;
+}
+
+.footer {
+  margin-top: 50px;
+  text-align: center;
+}

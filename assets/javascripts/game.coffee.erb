@@ -1,0 +1,80 @@
+enemies = null
+land = null
+bullets = null
+explosions = null
+fireRate = 500
+nextFire = 0
+nextEnemy0 = 0
+enemyRate0 = 400
+
+preload = ->
+  game.load.image('sea', '<%= image_path('sea.png') %>')
+  game.load.image('bullet', '<%= image_path('bullet-small.png') %>')
+  <% 5.times do |x| %>
+  game.load.image('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>')
+  <% end %>
+  game.load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
+  return
+
+fire = ->
+  if (game.time.now > nextFire && bullets.countDead() > 0)
+    nextFire = game.time.now + fireRate
+    bullet = bullets.getFirstExists(false)
+    bullet.reset(400, 590)
+    bullet.rotation = game.physics.arcade.moveToPointer(bullet, 100, game.input.activePointer)
+
+collisionHandler = (bullet, enemy) ->
+  bullet.kill()
+  enemy.kill()
+  explosion = explosions.getFirstExists(false)
+  explosion.reset(enemy.body.x, enemy.body.y)
+  explosion.play('explosion', 30, false, true)
+
+create = ->
+  land = game.add.tileSprite(0, 0, 800, 600, 'sea')
+
+  enemies = game.add.group()
+  enemies.enableBody = true
+  enemies.physicsBodyType = Phaser.Physics.ARCADE
+  enemies.createMultiple(30, 'enemy0', 0, false)
+  enemies.setAll('anchor.x', 0.5)
+  enemies.setAll('anchor.y', 0.5)
+  enemies.setAll('outOfBoundsKill', true)
+  enemies.setAll('checkWorldBounds', true)
+
+  bullets = game.add.group()
+  bullets.enableBody = true
+  bullets.physicsBodyType = Phaser.Physics.ARCADE
+  bullets.createMultiple(30, 'bullet', 0, false)
+  bullets.setAll('anchor.x', 0.5)
+  bullets.setAll('anchor.y', 0.5)
+  bullets.setAll('outOfBoundsKill', true)
+  bullets.setAll('checkWorldBounds', true)
+
+  explosions = game.add.group()
+  explosions.createMultiple(50, 'explosion')
+  explosions.forEach(((explosion) ->
+    explosion.anchor.x = 0
+    explosion.anchor.y = 0
+    explosion.animations.add 'explosion'
+  ), this)
+  return
+
+update = ->
+  fire() if game.input.activePointer.isDown
+  land.tilePosition.y += 0.5
+  game.physics.arcade.overlap(bullets, enemies, collisionHandler, null, this)
+
+render = ->
+  #console.log "#{game.time.now} #{nextEnemy0} #{enemies.countDead()}"
+  if game.time.now > nextEnemy0 and enemies.countDead() > 0
+    nextEnemy0 = game.time.now + enemyRate0
+    enemy = enemies.getFirstExists(false)
+    enemy.reset(20 + Math.random() * 760, 0)
+    enemy.body.velocity.y = 30 + Math.random() * 30
+
+  return
+
+
+game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-container', { preload: preload, create: create, update: update, render: render })
+

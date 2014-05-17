@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      background: #333;
+    }
+    canvas {
+      background: #0055b8;
+    }
+  </style>
+    
+    <script src="http://code.createjs.com/easeljs-0.7.0.min.js"></script>
+    <script>
+      var stage, plane;
+      function init() {
+        stage = new createjs.Stage(document.getElementById("gameCanvas"));
+        var ss = new createjs.SpriteSheet({
+              images: ["./1945.png"],
+              frames: [
+                [4, 4, 32, 32, 0, 16, 16]
+              ]
+            });
+        plane = new createjs.Sprite(ss, 0);
+        plane.x = 100;
+        plane.y = 100;
+
+        stage.addChild(plane);
+        stage.update();
+        createjs.Ticker.setFPS(30);
+        createjs.Ticker.addEventListener("tick", tick);
+      }
+      function tick(event) {
+        plane.y += 1;
+        if (plane.y > 316) {
+          plane.y = 0;
+        }
+        stage.update(event);
+      }
+    </script>
+</head>
+<body onLoad="init();">
+    <canvas id="gameCanvas" width="500" height="300">
+        alternate content
+    </canvas>
+</body>
+</html>
