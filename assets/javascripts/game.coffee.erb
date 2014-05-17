@@ -2,16 +2,19 @@ enemies = null
 land = null
 bullets = null
 explosions = null
-fireRate = 500
+turret = null
+fireRate = 200
 nextFire = 0
 nextEnemy0 = 0
 enemyRate0 = 400
 
 preload = ->
   game.load.image('sea', '<%= image_path('sea.png') %>')
+  game.load.image('crosshair', '<%= image_path('crosshair-small.png') %>')
+  game.load.image('turret', '<%= image_path('turret-small.png') %>')
   game.load.image('bullet', '<%= image_path('bullet-small.png') %>')
   <% 5.times do |x| %>
-  game.load.image('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>')
+  game.load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
   <% end %>
   game.load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
   return
@@ -21,14 +24,17 @@ fire = ->
     nextFire = game.time.now + fireRate
     bullet = bullets.getFirstExists(false)
     bullet.reset(400, 590)
-    bullet.rotation = game.physics.arcade.moveToPointer(bullet, 100, game.input.activePointer)
+    bullet.rotation = game.physics.arcade.moveToPointer(bullet, 200, game.input.activePointer)
 
 collisionHandler = (bullet, enemy) ->
   bullet.kill()
-  enemy.kill()
-  explosion = explosions.getFirstExists(false)
-  explosion.reset(enemy.body.x, enemy.body.y)
-  explosion.play('explosion', 30, false, true)
+  if Math.random() < 0.5
+    enemy.kill()
+    explosion = explosions.getFirstExists(false)
+    explosion.reset(enemy.body.x, enemy.body.y)
+    explosion.play('explosion', 30, false, true)
+  else
+    enemy.play('hit')
 
 create = ->
   land = game.add.tileSprite(0, 0, 800, 600, 'sea')
@@ -41,6 +47,13 @@ create = ->
   enemies.setAll('anchor.y', 0.5)
   enemies.setAll('outOfBoundsKill', true)
   enemies.setAll('checkWorldBounds', true)
+  enemies.forEach( (enemy) ->
+    enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
+    enemy.animations.add('fly', [ 0, 1, 2 ], 10, true)
+    enemy.events.onAnimationComplete.add( (enemy) ->
+      enemy.play('fly')
+    , this)
+  , this)
 
   bullets = game.add.group()
   bullets.enableBody = true
@@ -58,12 +71,16 @@ create = ->
     explosion.anchor.y = 0
     explosion.animations.add 'explosion'
   ), this)
+
+  turret = game.add.sprite(400, 590, 'turret')
+  turret.anchor.setTo(0.3, 0.5)
   return
 
 update = ->
   fire() if game.input.activePointer.isDown
   land.tilePosition.y += 0.5
   game.physics.arcade.overlap(bullets, enemies, collisionHandler, null, this)
+  turret.rotation = game.physics.arcade.angleToPointer(turret)
 
 render = ->
   #console.log "#{game.time.now} #{nextEnemy0} #{enemies.countDead()}"
@@ -72,6 +89,7 @@ render = ->
     enemy = enemies.getFirstExists(false)
     enemy.reset(20 + Math.random() * 760, 0)
     enemy.body.velocity.y = 30 + Math.random() * 30
+    enemy.play('fly')
 
   return
 
