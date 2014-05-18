@@ -1,180 +1,175 @@
-enemies = null
-enemies1 = null
-land = null
-bullets = null
-explosions = null
-turret = null
-fireRate = 100
-nextFire = 0
-nextEnemy0 = 0
-enemyRate0 = 220
-nextEnemy1 = 0
-enemyRate1 = 1000
-ammo = 100
-ammoText = null
-rewardExpire = 0
-rewardText = null
-kills = 0
-killText = null
+class Game
+  constructor: (game) ->
+    @fireRate = 100
+    @nextFire = 0
+    @nextEnemy0 = 0
+    @enemyRate0 = 220
+    @nextEnemy1 = 0
+    @enemyRate1 = 1000
+    @ammo = 100
+    @rewardExpire = 0
+    @kills = 0
+    
 
-preload = ->
-  game.load.image('sea', '<%= image_path('sea.png') %>')
-  game.load.image('crosshair', '<%= image_path('crosshair-small.png') %>')
-  game.load.image('turret', '<%= image_path('turret-small.png') %>')
-  game.load.image('bullet', '<%= image_path('bullet-small.png') %>')
-  <% 5.times do |x| %>
-  game.load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
-  <% end %>
-  game.load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
-  game.load.image('deck', '<%= image_path('deck.png') %>')
-  return
+  preload: ->
+    @game.load.image('sea', '<%= image_path('sea.png') %>')
+    @game.load.image('crosshair', '<%= image_path('crosshair-small.png') %>')
+    @game.load.image('turret', '<%= image_path('turret-small.png') %>')
+    @game.load.image('bullet', '<%= image_path('bullet-small.png') %>')
+    <% 5.times do |x| %>
+    @game.load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
+    <% end %>
+    @game.load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
+    @game.load.image('deck', '<%= image_path('deck.png') %>')
+    return
 
-fire = ->
-  if (ammo > 0 and game.time.now > nextFire && bullets.countDead() > 0 and game.input.activePointer.y < 520)
-    nextFire = game.time.now + fireRate
-    bullet = bullets.getFirstExists(false)
-    bullet.reset(400, 525)
-    bullet.rotation = game.physics.arcade.moveToPointer(bullet, 200, game.input.activePointer)
-    ammo--
-    ammoText.text = ammo
+  fire: ->
+    if (@ammo > 0 and @game.time.now > @nextFire && @bullets.countDead() > 0 and @game.input.activePointer.y < 520)
+      @nextFire = @game.time.now + @fireRate
+      @bullet = @bullets.getFirstExists(false)
+      @bullet.reset(400, 525)
+      @bullet.rotation = @game.physics.arcade.moveToPointer(@bullet, 200, @game.input.activePointer)
+      @ammo--
+      @ammoText.text = @ammo
 
+  create: ->
+    @land = @game.add.tileSprite(0, 0, 800, 600, 'sea')
 
-collisionHandler = (bullet, enemy) ->
-  bullet.kill()
-  if Math.random() < 0.66
-    enemy.kill()
-    explosion = explosions.getFirstExists(false)
-    explosion.reset(enemy.body.x, enemy.body.y)
-    explosion.play('explosion', 30, false, true)
-    ammo += 2
-    ammoText.text = ammo
-    rewardText.text = '+2'
-    rewardExpire = game.time.now + 200
-    kills++
-    killText.text = "Kills: " + kills
-  else
-    enemy.play('hit')
-
-collisionHandler1 = (bullet, enemy) ->
-  bullet.kill()
-  if Math.random() < 0.30
-    enemy.kill()
-    explosion = explosions.getFirstExists(false)
-    explosion.reset(enemy.body.x, enemy.body.y)
-    explosion.play('explosion', 30, false, true)
-    ammo += 5
-    ammoText.text = ammo
-    rewardText.text = '+5'
-    rewardExpire = game.time.now + 200
-    kills++
-    killText.text = "Kills: " + kills
-  else
-    enemy.play('hit')
-
-create = ->
-  land = game.add.tileSprite(0, 0, 800, 600, 'sea')
-
-  enemies = game.add.group()
-  enemies.enableBody = true
-  enemies.physicsBodyType = Phaser.Physics.ARCADE
-  enemies.createMultiple(30, 'enemy0', 0, false)
-  enemies.setAll('anchor.x', 0.5)
-  enemies.setAll('anchor.y', 0.5)
-  enemies.forEach( (enemy) ->
-    enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
-    enemy.animations.add('fly', [ 0, 1, 2 ], 20, true)
-    enemy.events.onAnimationComplete.add( (enemy) ->
-      enemy.play('fly')
+    @enemies = @game.add.group()
+    @enemies.enableBody = true
+    @enemies.physicsBodyType = Phaser.Physics.ARCADE
+    @enemies.createMultiple(30, 'enemy0', 0, false)
+    @enemies.setAll('anchor.x', 0.5)
+    @enemies.setAll('anchor.y', 0.5)
+    @enemies.forEach( (enemy) ->
+      enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
+      enemy.animations.add('fly', [ 0, 1, 2 ], 20, true)
+      enemy.events.onAnimationComplete.add( (enemy) ->
+        enemy.play('fly')
+      , this)
     , this)
-  , this)
 
-  enemies1 = game.add.group()
-  enemies1.enableBody = true
-  enemies1.physicsBodyType = Phaser.Physics.ARCADE
-  enemies1.createMultiple(50, 'enemy1', 0, false)
-  enemies1.setAll('anchor.x', 0.5)
-  enemies1.setAll('anchor.y', 0.5)
-  enemies1.forEach( (enemy) ->
-    enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
-    enemy.animations.add('fly', [ 0, 1, 2 ], 20, true)
-    enemy.events.onAnimationComplete.add( (enemy) ->
-      enemy.play('fly')
+    @enemies1 = @game.add.group()
+    @enemies1.enableBody = true
+    @enemies1.physicsBodyType = Phaser.Physics.ARCADE
+    @enemies1.createMultiple(50, 'enemy1', 0, false)
+    @enemies1.setAll('anchor.x', 0.5)
+    @enemies1.setAll('anchor.y', 0.5)
+    @enemies1.forEach( (enemy) ->
+      enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
+      enemy.animations.add('fly', [ 0, 1, 2 ], 20, true)
+      enemy.events.onAnimationComplete.add( (enemy) ->
+        enemy.play('fly')
+      , this)
     , this)
-  , this)
 
-  explosions = game.add.group()
-  explosions.createMultiple(50, 'explosion')
-  explosions.forEach(((explosion) ->
-    explosion.anchor.x = 0
-    explosion.anchor.y = 0
-    explosion.animations.add 'explosion'
-  ), this)
+    @explosions = @game.add.group()
+    @explosions.createMultiple(50, 'explosion')
+    @explosions.forEach(((explosion) ->
+      explosion.anchor.x = 0
+      explosion.anchor.y = 0
+      explosion.animations.add 'explosion'
+    ), this)
 
-  deck = game.add.sprite(0, 520, 'deck')
+    @deck = @game.add.sprite(0, 520, 'deck')
 
-  bullets = game.add.group()
-  bullets.enableBody = true
-  bullets.physicsBodyType = Phaser.Physics.ARCADE
-  bullets.createMultiple(50, 'bullet', 0, false)
-  bullets.setAll('anchor.x', 0.5)
-  bullets.setAll('anchor.y', 0.5)
-  bullets.setAll('outOfBoundsKill', true)
-  bullets.setAll('checkWorldBounds', true)
+    @bullets = @game.add.group()
+    @bullets.enableBody = true
+    @bullets.physicsBodyType = Phaser.Physics.ARCADE
+    @bullets.createMultiple(50, 'bullet', 0, false)
+    @bullets.setAll('anchor.x', 0.5)
+    @bullets.setAll('anchor.y', 0.5)
+    @bullets.setAll('outOfBoundsKill', true)
+    @bullets.setAll('checkWorldBounds', true)
 
-  turret = game.add.sprite(400, 525, 'turret')
-  turret.anchor.setTo(0.3, 0.5)
+    @turret = @game.add.sprite(400, 525, 'turret')
+    @turret.anchor.setTo(0.3, 0.5)
 
-  ammoText = game.add.text(400, 545, ammo, { font: '14px monospace', fill: '#fff' })
-  ammoText.anchor.setTo(0.5, 0.5)
+    @ammoText = @game.add.text(400, 545, @ammo, { font: '14px monospace', fill: '#fff' })
+    @ammoText.anchor.setTo(0.5, 0.5)
 
-  rewardText = game.add.text(400, 565, "", { font: '14px monospace', fill: '#fff' })
-  rewardText.anchor.setTo(0.5, 0.5)
+    @rewardText = @game.add.text(400, 565, "", { font: '14px monospace', fill: '#fff' })
+    @rewardText.anchor.setTo(0.5, 0.5)
 
-  killText = game.add.text(20, 545, "Kills: 0", { font: '14px monospace', fill: '#fff' })
-  killText.anchor.setTo(0, 0.5)
-  return
+    @killText = @game.add.text(20, 545, "Kills: 0", { font: '14px monospace', fill: '#fff' })
+    @killText.anchor.setTo(0, 0.5)
+    return
 
-update = ->
-  fire() if game.input.activePointer.isDown
-  land.tilePosition.y += 0.5
-  game.physics.arcade.overlap(bullets, enemies, collisionHandler, null, this)
-  game.physics.arcade.overlap(bullets, enemies1, collisionHandler1, null, this)
-  turret.rotation = game.physics.arcade.angleToPointer(turret)
-  enemies.forEach( (enemy) ->
-    enemy.kill() if enemy.y > 530
-  , this)
-  enemies1.forEach( (enemy) ->
-    enemy.kill() if enemy.y > 530
-  , this)
+  update: ->
+    @fire() if @game.input.activePointer.isDown
+    @land.tilePosition.y += 0.5
+    @game.physics.arcade.overlap(@bullets, @enemies, @collisionHandler, null, this)
+    @game.physics.arcade.overlap(@bullets, @enemies1, @collisionHandler1, null, this)
+    @turret.rotation = game.physics.arcade.angleToPointer(@turret)
+    @enemies.forEach( (enemy) ->
+      enemy.kill() if enemy.y > 530
+    , this)
+    @enemies1.forEach( (enemy) ->
+      enemy.kill() if enemy.y > 530
+    , this)
 
-render = ->
-  #console.log "#{game.time.now} #{nextEnemy0} #{enemies.countDead()}"
-  if game.time.now > rewardExpire
-    rewardText.text = ""
-  if game.time.now > nextEnemy0 and enemies.countDead() > 0
-    nextEnemy0 = game.time.now + enemyRate0
-    enemy = enemies.getFirstExists(false)
-    enemy.reset(20 + Math.random() * 760, 0)
-    enemy.body.velocity.y = 30 + Math.random() * 30
-    enemy.play('fly')
+  render: ->
+    #console.log "#{game.time.now} #{nextEnemy0} #{enemies.countDead()}"
+    if @game.time.now > @rewardExpire
+      @rewardText.text = ""
+    if @game.time.now > @nextEnemy0 and @enemies.countDead() > 0
+      @nextEnemy0 = @game.time.now + @enemyRate0
+      enemy = @enemies.getFirstExists(false)
+      enemy.reset(20 + Math.random() * 760, 0)
+      enemy.body.velocity.y = 30 + Math.random() * 30
+      enemy.play('fly')
 
-  if game.time.now > nextEnemy1 and enemies1.countDead() > 0
-    nextEnemy1 = game.time.now + enemyRate1
-    enemy = enemies1.getFirstExists(false)
-    if Math.random() < 0.5
-      enemy.reset(0, 20 + Math.random() * 320)
-      enemy.body.velocity.x = 20 + Math.random() * 20
-      enemy.rotation = -Math.PI / 2
+    if @game.time.now > @nextEnemy1 and @enemies1.countDead() > 0
+      @nextEnemy1 = @game.time.now + @enemyRate1
+      enemy = @enemies1.getFirstExists(false)
+      if Math.random() < 0.5
+        enemy.reset(0, 20 + Math.random() * 320)
+        enemy.body.velocity.x = 40 + Math.random() * 40
+        enemy.rotation = -Math.PI / 2
+      else
+        enemy.reset(800, 20 + Math.random() * 320)
+        enemy.body.velocity.x = -(40 + Math.random() * 40)
+        enemy.rotation = Math.PI / 2
+      enemy.body.velocity.y = 30
+      enemy.play('fly')
+
+    return
+
+  collisionHandler: (bullet, enemy) ->
+    console.log bullet
+    console.log enemy
+    bullet.kill()
+    if Math.random() < 0.66
+      enemy.kill()
+      explosion = @explosions.getFirstExists(false)
+      explosion.reset(enemy.body.x, enemy.body.y)
+      explosion.play('explosion', 30, false, true)
+      @ammo += 2
+      @ammoText.text = @ammo
+      @rewardText.text = '+2'
+      @rewardExpire = @game.time.now + 200
+      @kills++
+      @killText.text = "Kills: " + @kills
     else
-      enemy.reset(800, 20 + Math.random() * 320)
-      enemy.body.velocity.x = -(20 + Math.random() * 20)
-      enemy.rotation = Math.PI / 2
-    enemy.body.velocity.y = 30
-    enemy.play('fly')
+      enemy.play('hit')
 
-  return
+  collisionHandler1: (bullet, enemy) ->
+    bullet.kill()
+    if Math.random() < 0.30
+      enemy.kill()
+      explosion = @explosions.getFirstExists(false)
+      explosion.reset(enemy.body.x, enemy.body.y)
+      explosion.play('explosion', 30, false, true)
+      @ammo += 5
+      @ammoText.text = @ammo
+      @rewardText.text = '+5'
+      @rewardExpire = @game.time.now + 200
+      @kills++
+      @killText.text = "Kills: " + @kills
+    else
+      enemy.play('hit')
 
+game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-container')
+game.state.add('Game', Game)
 
-game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-container', { preload: preload, create: create, update: update, render: render })
-
-window.enemies1 = enemies1
+game.state.start('Game')
