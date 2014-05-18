@@ -9,15 +9,26 @@ class Game
     @ammo = 100
     @rewardExpire = 0
     @kills = 0
-    
+  
+  ENEMY_COUNT: [50, 30]
+
+  HIT_RATE:
+    bullet:
+      enemy0: 0.66
+      enemy1: 0.30
+
+  REWARD:
+    enemy0: 2
+    enemy1: 5
 
   preload: ->
     @game.load.image('sea', '<%= image_path('sea.png') %>')
     @game.load.image('crosshair', '<%= image_path('crosshair-small.png') %>')
     @game.load.image('turret', '<%= image_path('turret-small.png') %>')
     @game.load.image('bullet', '<%= image_path('bullet-small.png') %>')
-    <% 5.times do |x| %>
+    <% 2.times do |x| %>
     @game.load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
+    @game.load.spritesheet('reward<%= x %>', '<%= image_path("reward#{x}.png") %>', 32, 32, 10)
     <% end %>
     @game.load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
     @game.load.image('deck', '<%= image_path('deck.png') %>')
@@ -35,41 +46,38 @@ class Game
   create: ->
     @land = @game.add.tileSprite(0, 0, 800, 600, 'sea')
 
-    @enemies = @game.add.group()
-    @enemies.enableBody = true
-    @enemies.physicsBodyType = Phaser.Physics.ARCADE
-    @enemies.createMultiple(30, 'enemy0', 0, false)
-    @enemies.setAll('anchor.x', 0.5)
-    @enemies.setAll('anchor.y', 0.5)
-    @enemies.forEach( (enemy) ->
-      enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
-      enemy.animations.add('fly', [ 0, 1, 2 ], 20, true)
-      enemy.events.onAnimationComplete.add( (enemy) ->
-        enemy.play('fly')
+    @enemies = []
+    for i in [0...@ENEMY_COUNT.length]
+      enemies = @game.add.group()
+      enemies.enableBody = true
+      enemies.physicsBodyType = Phaser.Physics.ARCADE
+      enemies.createMultiple(@ENEMY_COUNT[i], 'enemy' + i, 0, false)
+      enemies.setAll('anchor.x', 0.5)
+      enemies.setAll('anchor.y', 0.5)
+      enemies.forEach( (enemy) ->
+        enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
+        enemy.animations.add('fly', [ 0, 1, 2 ], 20, true)
+        enemy.events.onAnimationComplete.add( (enemy) ->
+          enemy.play('fly')
+        , this)
       , this)
-    , this)
-
-    @enemies1 = @game.add.group()
-    @enemies1.enableBody = true
-    @enemies1.physicsBodyType = Phaser.Physics.ARCADE
-    @enemies1.createMultiple(50, 'enemy1', 0, false)
-    @enemies1.setAll('anchor.x', 0.5)
-    @enemies1.setAll('anchor.y', 0.5)
-    @enemies1.forEach( (enemy) ->
-      enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
-      enemy.animations.add('fly', [ 0, 1, 2 ], 20, true)
-      enemy.events.onAnimationComplete.add( (enemy) ->
-        enemy.play('fly')
-      , this)
-    , this)
+      @enemies.push(enemies)
 
     @explosions = @game.add.group()
     @explosions.createMultiple(50, 'explosion')
+    @explosions.setAll('animations.add', 'explosion')
     @explosions.forEach(((explosion) ->
-      explosion.anchor.x = 0
-      explosion.anchor.y = 0
       explosion.animations.add 'explosion'
     ), this)
+
+    @rewards = []
+    for i in [0...@ENEMY_COUNT.length]
+      rewards = @game.add.group()
+      rewards.createMultiple(50, 'reward' + i)
+      rewards.forEach(((reward) ->
+        reward.animations.add 'reward' + i
+      ), this)
+      @rewards.push(rewards)
 
     @deck = @game.add.sprite(0, 520, 'deck')
 
@@ -98,30 +106,27 @@ class Game
   update: ->
     @fire() if @game.input.activePointer.isDown
     @land.tilePosition.y += 0.5
-    @game.physics.arcade.overlap(@bullets, @enemies, @collisionHandler, null, this)
-    @game.physics.arcade.overlap(@bullets, @enemies1, @collisionHandler1, null, this)
     @turret.rotation = game.physics.arcade.angleToPointer(@turret)
-    @enemies.forEach( (enemy) ->
-      enemy.kill() if enemy.y > 530
-    , this)
-    @enemies1.forEach( (enemy) ->
-      enemy.kill() if enemy.y > 530
-    , this)
+    for i in [0...@ENEMY_COUNT.length]
+      @game.physics.arcade.overlap(@bullets, @enemies[i], @collisionHandler, null, this)
+      @enemies[i].forEach( (enemy) ->
+        enemy.kill() if enemy.y > 530
+      , this)
 
   render: ->
     #console.log "#{game.time.now} #{nextEnemy0} #{enemies.countDead()}"
     if @game.time.now > @rewardExpire
       @rewardText.text = ""
-    if @game.time.now > @nextEnemy0 and @enemies.countDead() > 0
+    if @game.time.now > @nextEnemy0 and @enemies[0].countDead() > 0
       @nextEnemy0 = @game.time.now + @enemyRate0
-      enemy = @enemies.getFirstExists(false)
+      enemy = @enemies[0].getFirstExists(false)
       enemy.reset(20 + Math.random() * 760, 0)
       enemy.body.velocity.y = 30 + Math.random() * 30
       enemy.play('fly')
 
-    if @game.time.now > @nextEnemy1 and @enemies1.countDead() > 0
+    if @game.time.now > @nextEnemy1 and @enemies[1].countDead() > 0
       @nextEnemy1 = @game.time.now + @enemyRate1
-      enemy = @enemies1.getFirstExists(false)
+      enemy = @enemies[1].getFirstExists(false)
       if Math.random() < 0.5
         enemy.reset(0, 20 + Math.random() * 320)
         enemy.body.velocity.x = 40 + Math.random() * 40
@@ -136,33 +141,19 @@ class Game
     return
 
   collisionHandler: (bullet, enemy) ->
-    console.log bullet
-    console.log enemy
     bullet.kill()
-    if Math.random() < 0.66
+    if Math.random() < @HIT_RATE[bullet.key][enemy.key]
+      i = parseInt(enemy.key.slice(5))
       enemy.kill()
       explosion = @explosions.getFirstExists(false)
       explosion.reset(enemy.body.x, enemy.body.y)
       explosion.play('explosion', 30, false, true)
-      @ammo += 2
+      reward = @rewards[i].getFirstExists(false)
+      reward.reset(enemy.body.x, enemy.body.y)
+      reward.play('reward' + i, 30, false, true)
+      @ammo += @REWARD[enemy.key]
       @ammoText.text = @ammo
-      @rewardText.text = '+2'
-      @rewardExpire = @game.time.now + 200
-      @kills++
-      @killText.text = "Kills: " + @kills
-    else
-      enemy.play('hit')
-
-  collisionHandler1: (bullet, enemy) ->
-    bullet.kill()
-    if Math.random() < 0.30
-      enemy.kill()
-      explosion = @explosions.getFirstExists(false)
-      explosion.reset(enemy.body.x, enemy.body.y)
-      explosion.play('explosion', 30, false, true)
-      @ammo += 5
-      @ammoText.text = @ammo
-      @rewardText.text = '+5'
+      @rewardText.text = '+' + @REWARD[enemy.key]
       @rewardExpire = @game.time.now + 200
       @kills++
       @killText.text = "Kills: " + @kills
