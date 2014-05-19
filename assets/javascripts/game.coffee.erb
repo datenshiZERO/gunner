@@ -1,7 +1,10 @@
 class Game
   constructor: (game) ->
-    @fireRate = 100
-    @nextFire = 0
+    @nextFire =
+      small: 0
+      large: 0
+      burst: 0
+
     @nextEnemy0 = 0
     @enemyRate0 = 220
     @nextEnemy1 = 0
@@ -9,13 +12,37 @@ class Game
     @ammo = 100
     @rewardExpire = 0
     @kills = 0
-  
+    @selectedBullet = 'small'
+
+  BULLET_TYPES: ['small', 'large', 'burst']
+
   ENEMY_COUNT: [50, 30]
 
+  AMMO_REQ:
+    small: 1
+    large: 3
+    burst: 8
+
+  BULLET_OFFSET:
+    small: 20
+    large: 30
+    burst: 35
+
+  FIRE_RATE:
+    small: 100
+    large: 150
+    burst: 250
+
   HIT_RATE:
-    bullet:
+    "bullet-small":
       enemy0: 0.66
       enemy1: 0.30
+    "bullet-large":
+      enemy0: 1
+      enemy1: 0.9
+    "bullet-burst":
+      enemy0: 1
+      enemy1: 1
 
   REWARD:
     enemy0: 2
@@ -24,8 +51,10 @@ class Game
   preload: ->
     @game.load.image('sea', '<%= image_path('sea.png') %>')
     @game.load.image('crosshair', '<%= image_path('crosshair-small.png') %>')
-    @game.load.image('turret', '<%= image_path('turret-small.png') %>')
-    @game.load.image('bullet', '<%= image_path('bullet-small.png') %>')
+    <% %w{small large burst}.each do |x| %>
+    @game.load.image('turret-<%= x %>', '<%= image_path("turret-#{x}.png") %>')
+    @game.load.image('bullet-<%= x %>', '<%= image_path("bullet-#{x}.png") %>')
+    <% end %>
     <% 2.times do |x| %>
     @game.load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
     @game.load.spritesheet('reward<%= x %>', '<%= image_path("reward#{x}.png") %>', 32, 32, 10)
@@ -35,12 +64,16 @@ class Game
     return
 
   fire: ->
-    if (@ammo > 0 and @game.time.now > @nextFire && @bullets.countDead() > 0 and @game.input.activePointer.y < 520)
-      @nextFire = @game.time.now + @fireRate
-      @bullet = @bullets.getFirstExists(false)
-      @bullet.reset(400, 525)
-      @bullet.rotation = @game.physics.arcade.moveToPointer(@bullet, 200, @game.input.activePointer)
-      @ammo--
+    bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
+    ammoReq = @AMMO_REQ[@selectedBullet]
+    if (@ammo >= ammoReq and @game.time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0 and @game.input.activePointer.y < 520)
+      @nextFire[@selectedBullet] = @game.time.now + @FIRE_RATE[@selectedBullet]
+      bullet = bullets.getFirstExists(false)
+      angle = @game.physics.arcade.angleToPointer(@turrets[@selectedBullet])
+      offset = @BULLET_OFFSET[@selectedBullet]
+      bullet.reset(400 + Math.cos(angle) * offset, 525 + Math.sin(angle) * offset)
+      bullet.rotation = @game.physics.arcade.moveToPointer(bullet, 200, @game.input.activePointer)
+      @ammo-= ammoReq
       @ammoText.text = @ammo
 
   create: ->
@@ -81,17 +114,25 @@ class Game
 
     @deck = @game.add.sprite(0, 520, 'deck')
 
-    @bullets = @game.add.group()
-    @bullets.enableBody = true
-    @bullets.physicsBodyType = Phaser.Physics.ARCADE
-    @bullets.createMultiple(50, 'bullet', 0, false)
-    @bullets.setAll('anchor.x', 0.5)
-    @bullets.setAll('anchor.y', 0.5)
-    @bullets.setAll('outOfBoundsKill', true)
-    @bullets.setAll('checkWorldBounds', true)
+    @bullets = []
+    for bullet in @BULLET_TYPES
+      bullets = @game.add.group()
+      bullets.enableBody = true
+      bullets.physicsBodyType = Phaser.Physics.ARCADE
+      console.log 'bullet-' + bullet
+      bullets.createMultiple(50, 'bullet-' + bullet, 0, false)
+      bullets.setAll('anchor.x', 0.5)
+      bullets.setAll('anchor.y', 0.5)
+      bullets.setAll('outOfBoundsKill', true)
+      bullets.setAll('checkWorldBounds', true)
+      @bullets.push bullets
 
-    @turret = @game.add.sprite(400, 525, 'turret')
-    @turret.anchor.setTo(0.3, 0.5)
+    @turrets = {}
+    for i in @BULLET_TYPES
+      @turrets[i] = @game.add.sprite(400, 525, 'turret-' + i)
+      @turrets[i].anchor.setTo(0.3, 0.5)
+      unless i is @selectedBullet
+        @turrets[i].kill()
 
     @ammoText = @game.add.text(400, 545, @ammo, { font: '14px monospace', fill: '#fff' })
     @ammoText.anchor.setTo(0.5, 0.5)
@@ -105,10 +146,27 @@ class Game
 
   update: ->
     @fire() if @game.input.activePointer.isDown
+    bulletChanged = true
+    if @game.input.keyboard.isDown(Phaser.Keyboard.ONE) and not (@selectedBullet is 'small')
+      @selectedBullet = 'small'
+    else if @game.input.keyboard.isDown(Phaser.Keyboard.TWO) and not (@selectedBullet is 'large')
+      @selectedBullet = 'large'
+    else if @game.input.keyboard.isDown(Phaser.Keyboard.THREE) and not (@selectedBullet is 'burst')
+      @selectedBullet = 'burst'
+    else
+      bulletChanged = false
+
+    if bulletChanged
+      for i in @BULLET_TYPES
+        unless i is @selectedBullet
+          @turrets[i].kill()
+      @turrets[@selectedBullet].reset(400, 525)
+
     @land.tilePosition.y += 0.5
-    @turret.rotation = game.physics.arcade.angleToPointer(@turret)
+    @turrets[@selectedBullet].rotation = @game.physics.arcade.angleToPointer(@turrets[@selectedBullet])
     for i in [0...@ENEMY_COUNT.length]
-      @game.physics.arcade.overlap(@bullets, @enemies[i], @collisionHandler, null, this)
+      for j in [0...@BULLET_TYPES.length]
+        @game.physics.arcade.overlap(@bullets[j], @enemies[i], @collisionHandler, null, this)
       @enemies[i].forEach( (enemy) ->
         enemy.kill() if enemy.y > 530
       , this)
@@ -141,6 +199,15 @@ class Game
     return
 
   collisionHandler: (bullet, enemy) ->
+    if bullet.key is 'bullet-burst'
+      bullets = @bullets[0]
+      angle = (Math.random() * 2 * Math.PI) - Math.PI
+      for i in [1..5]
+        b = bullets.getFirstExists(false)
+        b.reset(bullet.x, bullet.y)
+        b.body.velocity.x = Math.cos(angle * i) * 200
+        b.body.velocity.y = Math.sin(angle * i) * 200
+
     bullet.kill()
     if Math.random() < @HIT_RATE[bullet.key][enemy.key]
       i = parseInt(enemy.key.slice(5))
