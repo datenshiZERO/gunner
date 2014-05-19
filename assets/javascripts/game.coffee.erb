@@ -112,7 +112,6 @@ class Game
       ), this)
       @rewards.push(rewards)
 
-    @deck = @game.add.sprite(0, 520, 'deck')
 
     @bullets = []
     for bullet in @BULLET_TYPES
@@ -126,6 +125,8 @@ class Game
       bullets.setAll('outOfBoundsKill', true)
       bullets.setAll('checkWorldBounds', true)
       @bullets.push bullets
+
+    @deck = @game.add.sprite(0, 520, 'deck')
 
     @turrets = {}
     for i in @BULLET_TYPES
@@ -201,12 +202,12 @@ class Game
   collisionHandler: (bullet, enemy) ->
     if bullet.key is 'bullet-burst'
       bullets = @bullets[0]
-      angle = (Math.random() * 2 * Math.PI) - Math.PI
-      for i in [1..5]
+      angle = Math.random() * 2 * Math.PI
+      for i in [0..4]
         b = bullets.getFirstExists(false)
         b.reset(bullet.x, bullet.y)
-        b.body.velocity.x = Math.cos(angle * i) * 200
-        b.body.velocity.y = Math.sin(angle * i) * 200
+        b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5)) * 200
+        b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5)) * 200
 
     bullet.kill()
     if Math.random() < @HIT_RATE[bullet.key][enemy.key]
