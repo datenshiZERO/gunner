@@ -286,6 +286,7 @@ class Game
       @bbtnd[i].inputEnabled = true
       @bbtn[i] = @game.add.sprite(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535, 'bbtn-' + i)
       @bbtn[i].inputEnabled = true
+      @bbtnd[i].kill()
 
       ((spriteGroup, disabledSpriteGroup, i, game) ->
         spriteGroup.events.onInputDown.add( () ->
@@ -295,10 +296,6 @@ class Game
           game.selectedBullet = i
         , this)
       )(@bbtn[i], @bbtnd[i], i, this)
-
-      unless i is @selectedBullet
-        @turrets[i].kill()
-        @bbtn[i].kill()
 
     @ammoText = @game.add.text(400, 545, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff' })
     @ammoText.anchor.setTo(0.5, 0.5)
@@ -330,8 +327,10 @@ class Game
         unless i is @selectedBullet
           @turrets[i].kill()
           @bbtn[i].kill()
+          @bbtnd[i].reset(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535)
         else
-          @bbtn[i].reset()
+          @bbtnd[i].kill()
+          @bbtn[i].reset(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535)
       @turrets[@selectedBullet].reset(400, 525)
       @lastSelectedBullet = @selectedBullet
 
