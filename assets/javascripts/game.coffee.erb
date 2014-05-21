@@ -1,4 +1,56 @@
+class Boot
+  constructor: (game) ->
+  preload: ->
+    @load.image('preloaderBG', '<%= image_path('preloader_bg.png') %>')
+    @load.image('preloaderBar', '<%= image_path('preloader_bar.png') %>')
+  create: ->
+    @state.start('Preloader')
+
+class Preloader
+  constructor: (game) ->
+  preload: ->
+    @background = @add.sprite(0, 0, 'preloaderBG')
+    @preloaderBar = @add.sprite(300, 300, 'preloaderBar')
+
+    @load.setPreloadSprite(@preloaderBar)
+
+    @load.image('sea', '<%= image_path('sea.png') %>')
+    @load.image('crosshair', '<%= image_path('crosshair-small.png') %>')
+    <% %w{small large burst}.each do |x| %>
+    @load.image('turret-<%= x %>', '<%= image_path("turret-#{x}.png") %>')
+    @load.image('bullet-<%= x %>', '<%= image_path("bullet-#{x}.png") %>')
+    @load.image('bbtn-<%= x %>', '<%= image_path("bbtn-#{x}.png") %>')
+    @load.image('bbtnd-<%= x %>', '<%= image_path("bbtnd-#{x}.png") %>')
+    <% end %>
+    <% [0, 1, 3].each do |x| %>
+    @load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
+    @load.spritesheet('reward<%= x %>', '<%= image_path("reward#{x}.png") %>', 32, 32, 10)
+    <% end %>
+    @load.spritesheet('enemy2', '<%= image_path("enemy2.png") %>', 32, 98)
+    @load.spritesheet('reward2', '<%= image_path("reward2.png") %>', 32, 32, 10)
+    @load.spritesheet('enemy4', '<%= image_path("enemy4.png") %>', 93, 75)
+    @load.spritesheet('reward4', '<%= image_path("reward4.png") %>', 64, 32, 10)
+    @load.spritesheet('enemy5', '<%= image_path("enemy5.png") %>', 32, 174)
+    @load.spritesheet('reward5', '<%= image_path("reward5.png") %>', 64, 32, 10)
+    @load.spritesheet('enemy6', '<%= image_path("enemy6.png") %>', 32, 32)
+    @load.spritesheet('reward6', '<%= image_path("reward6.png") %>', 64, 32, 10)
+
+    @load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
+    @load.spritesheet('explosion2', '<%= image_path("explosion2.png") %>', 64, 64, 7)
+    @load.image('deck', '<%= image_path('deck.png') %>')
+
+  create: ->
+    @state.start('Game')
+
 class Game
+  @RKE_FIGHTER = 0
+  @REG_FIGHTER = 1
+  @SUBMARINE = 2
+  @VET_FIGHTER = 3
+  @BOMBER = 4
+  @DESTROYER = 5
+  @ELT_FIGHTER = 6
+
   constructor: (game) ->
     @nextFire =
       small: 0
@@ -14,58 +66,70 @@ class Game
 
   ENEMY_LVL_CHART:
     0:
-      action: ["unlock", 0, 1000, 20]
+      action: ["unlock", @RKE_FIGHTER, 1000, 20]
       next: 20
     20:
-      action: ["setSpawnRate", 0, 600]
-      next: 50
+      action: ["setSpawnRate", @RKE_FIGHTER, 600]
+      next: null
     50:
-      action: ["unlock", 1, 5000, 10]
+      action: ["unlock", @REG_FIGHTER, 5000, 10]
       next: 100
     100:
-      action: ["setMaxCount", 0, 30]
+      action: ["setMaxCount", @RKE_FIGHTER, 30]
       next: 150
     150:
-      action: ["setSpawnRate", 1, 2500]
+      action: ["setSpawnRate", @REG_FIGHTER, 2500]
       next: 200
     200:
-      action: ["setSpawnRate", 0, 400]
+      action: ["setSpawnRate", @RKE_FIGHTER, 400]
       next: 300
     300:
-      action: ["setSpawnRate", 1, 1700]
+      action: ["setSpawnRate", @RKE_FIGHTER, 1700]
       next: 400
     400:
-      action: ["setSpawnRate", 0, 300]
+      action: ["setSpawnRate", @RKE_FIGHTER, 300]
       next: 500
     500:
-      action: ["setMaxCount", 0, 40]
+      action: ["setMaxCount", @RKE_FIGHTER, 40]
       next: 750
     750:
-      action: ["unlock", 2, 10000, 10]
+      action: ["unlock", @SUBMARINE, 10000, 10]
       next: 1000
     1000:
-      action: ["setSpawnRate", 1, 1200]
+      action: ["setSpawnRate", @REG_FIGHTER, 1200]
       next: 1250
     1250:
-      action: ["setSpawnRate", 0, 250]
+      action: ["setSpawnRate", @RKE_FIGHTER, 250]
       next: 1500
     1500:
-      action: ["setMaxCount", 1, 20]
+      action: ["setMaxCount", @REG_FIGHTER, 20]
+      next: 1750
+    1750:
+      action: ["setSpawnRate", @RKE_FIGHTER, 200]
       next: 2000
     2000:
-      action: ["setSpawnRate", 0, 200]
+      action: ["unlock", @VET_FIGHTER, 10000, 10]
+      next: 2250
+    2250:
+      action: ["setMaxCount", @RKE_FIGHTER, 60]
+      next: 2500
+    2500:
+      action: ["setMaxCount", @REG_FIGHTER, 30]
+      next: 2750
+    2750:
+      action: ["setSpawnRate", @VET_FIGHTER, 7500]
       next: 3000
     3000:
-      action: ["unlock", 3, 5000, 10]
+      action: ["setSpawnRate", @SUBMARINE, 8000]
       next: 4000
     4000:
-      action: ["unlock", 4, 10000, 10]
+      action: ["unlock", @BOMBER, 10000, 10]
       next: 5000
-    5000:
-      action: ["unlock", 5, 15000, 2]
-      next: 6000
     6000:
-      action: ["unlock", 6, 20000, 1]
+      action: ["unlock", @DESTROYER, 20000, 2]
+      next: 6250
+    10000:
+      action: ["unlock", @ELT_FIGHTER, 30000, 1]
       next: null
 
   BULLET_TYPES: ['small', 'large', 'burst']
@@ -107,7 +171,7 @@ class Game
     "bullet-burst":
       enemy0: 1
       enemy1: 1
-      enemy2: 0.7
+      enemy2: 0.35
       enemy3: 0.15
       enemy4: 0.05
       enemy5: 0.025
@@ -123,30 +187,7 @@ class Game
     enemy6: 500
 
   preload: ->
-    @game.load.image('sea', '<%= image_path('sea.png') %>')
-    @game.load.image('crosshair', '<%= image_path('crosshair-small.png') %>')
-    <% %w{small large burst}.each do |x| %>
-    @game.load.image('turret-<%= x %>', '<%= image_path("turret-#{x}.png") %>')
-    @game.load.image('bullet-<%= x %>', '<%= image_path("bullet-#{x}.png") %>')
-    @game.load.image('bbtn-<%= x %>', '<%= image_path("bbtn-#{x}.png") %>')
-    @game.load.image('bbtnd-<%= x %>', '<%= image_path("bbtnd-#{x}.png") %>')
-    <% end %>
-    <% [0, 1, 3].each do |x| %>
-    @game.load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
-    @game.load.spritesheet('reward<%= x %>', '<%= image_path("reward#{x}.png") %>', 32, 32, 10)
-    <% end %>
-    @game.load.spritesheet('enemy2', '<%= image_path("enemy2.png") %>', 32, 98)
-    @game.load.spritesheet('reward2', '<%= image_path("reward2.png") %>', 32, 32, 10)
-    @game.load.spritesheet('enemy4', '<%= image_path("enemy4.png") %>', 93, 75)
-    @game.load.spritesheet('reward4', '<%= image_path("reward4.png") %>', 64, 32, 10)
-    @game.load.spritesheet('enemy5', '<%= image_path("enemy5.png") %>', 32, 174)
-    @game.load.spritesheet('reward5', '<%= image_path("reward5.png") %>', 64, 32, 10)
-    @game.load.spritesheet('enemy6', '<%= image_path("enemy6.png") %>', 32, 32)
-    @game.load.spritesheet('reward6', '<%= image_path("reward6.png") %>', 64, 32, 10)
-
-    @game.load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
-    @game.load.spritesheet('explosion2', '<%= image_path("explosion2.png") %>', 64, 64, 7)
-    @game.load.image('deck', '<%= image_path('deck.png') %>')
+    @stage.disableVisibilityChange = true
     return
 
   fire: ->
@@ -161,6 +202,8 @@ class Game
       bullet.rotation = @game.physics.arcade.moveToPointer(bullet, 200, @game.input.activePointer)
       @ammo-= ammoReq
       @ammoText.text = 'Energy: ' + @ammo
+      if @ammo < 25
+        @ammoText.setStyle({font: '14px Army Wide', fill: "#f22"})
 
   setSpriteInfo: (enemyIdx) ->
     switch enemyIdx
@@ -208,9 +251,14 @@ class Game
         @setMaxCount(action[1], action[2])
 
     @nextEnemyLvlUp = @ENEMY_LVL_CHART[kills].next
+    if @nextEnemyLvlUp?
+      @nextWaveText.text =  "Next Level: #{@nextEnemyLvlUp} kills"
+    else
+      @nextWaveText.text =  "Max Level Reached"
 
   unlockEnemy: (enemyIdx, spawnRate, maxCount) ->
     @enemyRate[enemyIdx] = spawnRate
+    @enemies[enemyIdx].removeAll(true)
     @enemies[enemyIdx].createMultiple(maxCount, 'enemy' + enemyIdx, 0, false)
     @setSpriteInfo(enemyIdx)
     @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have appeared!"
@@ -218,7 +266,8 @@ class Game
 
   setMaxCount: (enemyIdx, maxCount) ->
     current = @enemies[enemyIdx].iterate('exists', true, Phaser.Group.RETURN_TOTAL) + @enemies[enemyIdx].iterate('exists', false, Phaser.Group.RETURN_TOTAL)
-    @enemies[enemyIdx].createMultiple(maxCount - current, 'enemy' + enemyIdx, 0, false)
+    if current < maxCount
+      @enemies[enemyIdx].createMultiple(maxCount - current, 'enemy' + enemyIdx, 0, false)
     @setSpriteInfo(enemyIdx)
     @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have increased in numbers!"
     @enemyLvlUpExpire = @game.time.now + 5000
@@ -233,7 +282,6 @@ class Game
       enemies = @game.add.group()
       enemies.enableBody = true
       enemies.physicsBodyType = Phaser.Physics.ARCADE
-      #enemies.createMultiple(@ENEMY_COUNT[i], 'enemy' + i, 0, false)
       @enemies.push(enemies)
 
     for i in [5, 2, 6, 4, 3, 1, 0]
@@ -300,10 +348,13 @@ class Game
     @ammoText = @game.add.text(400, 545, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff' })
     @ammoText.anchor.setTo(0.5, 0.5)
 
-    @killText = @game.add.text(400, 565, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
+    @killText = @game.add.text(400, 560, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
     @killText.anchor.setTo(0.5, 0.5)
 
     @game.add.text(180, 585, "Shot Type", { font: '14px Army Wide', fill: '#fff' }).anchor.setTo(0.5, 0.5)
+
+    @nextWaveText = @game.add.text(400, 580, "Next Level: #{@nextEnemyLvlUp} kills", { font: '14px Army Wide', fill: '#fff' })
+    @nextWaveText.anchor.setTo(0.5, 0.5)
 
     @enemyLvlUpText = @game.add.text(10, 20, "", { font: '14px Army Wide', fill: '#fff' })
     @enemyLvlUpText.anchor.setTo(0, 0.5)
@@ -335,7 +386,8 @@ class Game
       @lastSelectedBullet = @selectedBullet
 
     @land.tilePosition.y += 0.5
-    @turrets[@selectedBullet].rotation = @game.physics.arcade.angleToPointer(@turrets[@selectedBullet])
+    turretAngle = @game.physics.arcade.angleToPointer(@turrets[@selectedBullet])
+    @turrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
     for i in [0...@ENEMY_TYPES.length]
       for j in [0...@BULLET_TYPES.length]
         @game.physics.arcade.overlap(@bullets[j], @enemies[i], @collisionHandler, null, this)
@@ -486,12 +538,16 @@ class Game
       reward.play('reward' + i, 30, false, true)
       @ammo += @REWARD[enemy.key]
       @ammoText.text = 'Energy: ' + @ammo
+      if @ammo > 25
+        @ammoText.setStyle({font: '14px Army Wide', fill: "#fff"})
       @kills++
       @killText.text = "Kills: " + @kills
     else
       enemy.play('hit')
 
 game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-container')
+game.state.add('Boot', Boot)
+game.state.add('Preloader', Preloader)
 game.state.add('Game', Game)
 
-game.state.start('Game')
+game.state.start('Boot')
