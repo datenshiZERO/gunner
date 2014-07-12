@@ -70,7 +70,7 @@ class Game
       next: 20
     20:
       action: ["setSpawnRate", @RKE_FIGHTER, 600]
-      next: null
+      next: 50
     50:
       action: ["unlock", @REG_FIGHTER, 5000, 10]
       next: 100
@@ -84,7 +84,7 @@ class Game
       action: ["setSpawnRate", @RKE_FIGHTER, 400]
       next: 300
     300:
-      action: ["setSpawnRate", @RKE_FIGHTER, 1700]
+      action: ["setSpawnRate", @REG_FIGHTER, 1700]
       next: 400
     400:
       action: ["setSpawnRate", @RKE_FIGHTER, 300]
@@ -121,13 +121,46 @@ class Game
       next: 3000
     3000:
       action: ["setSpawnRate", @SUBMARINE, 8000]
+      next: 3250
+    3250:
+      action: ["setMaxCount", @RKE_FIGHTER, 80]
+      next: 3500
+    3500:
+      action: ["setSpawnRate", @REG_FIGHTER, 800]
+      next: 3750
+    3750:
+      action: ["setSpawnRate", @SUBMARINE, 7000]
       next: 4000
     4000:
       action: ["unlock", @BOMBER, 10000, 10]
+      next: 4250
+    4250:
+      action: ["setSpawnRate", @VET_FIGHTER, 5000]
+      next: 4500
+    4500:
+      action: ["setSpawnRate", @RKE_FIGHTER, 150]
+      next: 4750
+    4750:
+      action: ["setMaxCount", @RKE_FIGHTER, 120]
       next: 5000
+    5000:
+      action: ["setSpawnRate", @BOMBER, 8000]
+      next: 5250
+    5250:
+      action: ["setSpawnRate", @REG_FIGHTER, 700]
+      next: 5500
+    5500:
+      action: ["setMaxCount", @REG_FIGHTER, 50]
+      next: 5750
+    5750:
+      action: ["setSpawnRate", @VET_FIGHTER, 4000]
+      next: 6000
     6000:
       action: ["unlock", @DESTROYER, 20000, 2]
-      next: 6250
+      next: 8000
+    8000:
+      action: ["setSpawnRate", @DESTROYER, 15000]
+      next: 10000
     10000:
       action: ["unlock", @ELT_FIGHTER, 30000, 1]
       next: null
