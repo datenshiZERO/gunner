@@ -19,56 +19,8 @@
   %body
     - if ENV['RACK_ENV'] == 'production'
       #fb-root
-    .container.main-container
-      .row
-        .col-lg-12
-          %h1 Gunner
-          #game-container
-          %h2 How to play 
-          %p 
-            Fire your gun by clicking/tapping on the spot you wish to fire at. Hold down click/tap for continuous fire.
-
-          %p
-            You have 3 types of shot, each consuming different amounts of energy:
-
-          %ul
-            %li 
-              %strong Small (regular) shot
-              \- fast firing, good for spraying weak enemies. Consumes 1 energy per shot. 
-              %em (Keyboard shortcut: 1)
-            %li 
-              %strong Large shot
-              \- Slower, but better against tougher enemies. Consumes 3 energy per shot. 
-              %em (Keyboard shortcut: 2)
-            %li 
-              %strong Burst shot
-              \- Slow strong round that bursts into 5 small shots after dealing damage. Consumes 8 energy per shot. 
-              %em (Keyboard shortcut: 3)
-
-          %p
-            You regain energy by destroying enemies. Tougher enemies give more energy, but still counts as 1 kill.
-
-          %p
-            When your energy reaches 0, it's game over.
-
-      .row
-        .col-lg-12
-          .footer
-            %p.copyright
-              Copyright &copy;2014
-              %a{:href => "http://bryanbibat.net"} Bryan Bibat
-            %p.powered
-              Made with <a href="http://phaser.io">Phaser</a> and
-              <a href="http://www.widgetworx.com/spritelib/">SpriteLib</a>
-            %p.version
-              v0.22 - beta
-            - if ENV['RACK_ENV'] == 'production'
-              %p
-                .g-plusone{"data-size" => "medium"}
-                %a.twitter-share-button{"data-text" => "Play Gunner, an HTML5 game where you shoot down endless waves of enemies!", "href" => "https://twitter.com/share", "data-via" => "bry_bibat"} Tweet
-                .fb-share-button{"data-type" => "button_count"}
-            %p 
-              %a{ href: "https://github.com/datenshiZERO/gunner" } Fork this on Github
+    #game-container
+    #orientation This game works best when rotated to portrait mode
     %script{:type => "text/javascript", :src => javascript_path("app")}
     - if ENV['RACK_ENV'] == 'production'
       / Piwik
@@ -103,3 +55,21 @@
           js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
           fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'facebook-jssdk'));
+    - else
+      %script{:type => "text/javascript", :src => javascript_path("stats.min")}
+      :javascript
+        var stats = new Stats();
+
+        stats.setMode(0);
+
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.left = '0px';
+        stats.domElement.style.top = '0px';
+
+        document.body.appendChild(stats.domElement);
+
+        setInterval(function () {
+          stats.begin();
+          stats.end();
+        }, 1000 / 60);
+

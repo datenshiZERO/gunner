@@ -1,21 +1,60 @@
 class Boot
   constructor: (game) ->
   preload: ->
-    @load.image('preloaderBG', '<%= image_path('preloader_bg.png') %>')
     @load.image('preloaderBar', '<%= image_path('preloader_bar.png') %>')
   create: ->
+    @input.maxPointers = 1
+    @stage.disableVisibilityChange = true
+    if @game.device.desktop
+      @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
+      @scale.minWidth = 480
+      @scale.minHeight = 260
+      @scale.maxWidth = 800
+      @scale.maxHeight = 600
+      @scale.pageAlignHorizontally = true
+      @scale.pageAlignVertically = true
+      @scale.setScreenSize true
+    else
+      @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
+      @scale.minWidth = 480
+      @scale.minHeight = 260
+      @scale.maxWidth = 800
+      @scale.maxHeight = 600
+      @scale.pageAlignHorizontally = true
+      @scale.pageAlignVertically = true
+      @scale.forceOrientation true, false
+      @scale.hasResized.add @gameResized, this
+      @scale.enterIncorrectOrientation.add @enterIncorrectOrientation, this
+      @scale.leaveIncorrectOrientation.add @leaveIncorrectOrientation, this
+      @scale.setScreenSize true
     @state.start('Preloader')
+
+  gameResized: (width, height) ->
+    # This could be handy if you need to do any extra processing if the game resizes.
+    # A resize could happen if for example swapping orientation on a device.
+    
+  enterIncorrectOrientation: ->
+    @game.orientated = false
+    document.getElementById("orientation").style.display = "block"
+    return
+
+  leaveIncorrectOrientation: ->
+    @game.orientated = true
+    document.getElementById("orientation").style.display = "none"
+    return
 
 class Preloader
   constructor: (game) ->
   preload: ->
-    @background = @add.sprite(0, 0, 'preloaderBG')
-    @preloaderBar = @add.sprite(300, 300, 'preloaderBar')
+    @loadingText = @add.text(400, 270, "Loading", { font: '30px "Army Wide", monospace', fill: '#fff' })
+    @loadingText.anchor.setTo(0.5, 0.5)
+    @preloaderBar = @add.sprite(400, 300, 'preloaderBar')
+    @preloaderBar.anchor.setTo(0.5, 0.5)
 
     @load.setPreloadSprite(@preloaderBar)
 
     @load.image('sea', '<%= image_path('sea.png') %>')
-    @load.image('crosshair', '<%= image_path('crosshair-small.png') %>')
+    @load.image('crosshair', '<%= image_path('crosshair.png') %>')
     <% %w{small large burst}.each do |x| %>
     @load.image('turret-<%= x %>', '<%= image_path("turret-#{x}.png") %>')
     @load.image('bullet-<%= x %>', '<%= image_path("bullet-#{x}.png") %>')
@@ -40,7 +79,55 @@ class Preloader
     @load.image('deck', '<%= image_path('deck.png') %>')
 
   create: ->
-    @state.start('Game')
+    @state.start('MainMenu')
+
+class MainMenu
+  create: ->
+    @stage.backgroundColor = '#2d2d2d'
+    @titleText = @add.text(400, 150, "Gunner", { font: '90px "Army Wide", monospace', fill: '#fff' })
+    @titleText.anchor.setTo(0.5, 0.5)
+
+    @menuTexts = {}
+    @setupTopLevel()
+
+
+  addText: (text, x, y, selected, small) ->
+    @menuTexts[text] = @add.text(x, y, text,
+      {
+        font: "#{ if small then 16 else 22 }px 'Army Wide', monospace",
+        fill: (if selected then '#fff' else '#888')
+      })
+    @menuTexts[text].anchor.setTo(0.5, 0.5)
+    @menuTexts[text].inputEnabled = true
+    @menuTexts[text].events.onInputDown.add(@menuSelect, @menuTexts[text])
+
+
+  menuSelect: ->
+    state = @game.state.getCurrentState()
+    switch @text
+      when "Play Game"
+        state.setupOptions()
+      when "Start Game"
+        @game.state.start('Game')
+
+  setupTopLevel: ->
+    @addText 'Play Game', 400, 350, true
+    @addText 'How To Play', 400, 380, false
+    @addText 'High Scores', 400, 410, false
+    @addText 'Credits', 400, 440, false
+    @game.menuIndex = 0
+
+  setupOptions: ->
+    text.destroy() for key, text of @menuTexts
+
+    @addText 'Game Type', 250, 300, true
+    @addText 'Time Attack', 250, 350, true, true
+    @addText 'Survival', 250, 370, false, true
+    @addText 'Game Length', 550, 300, true
+    @addText 'Quick', 550, 340, false, true
+    @addText 'Normal', 550, 360, true, true
+    @addText 'Extended', 550, 380, false, true
+    @addText 'Start Game', 400, 450, true
 
 class Game
   @RKE_FIGHTER = 0
@@ -219,24 +306,413 @@ class Game
     enemy5: 200
     enemy6: 500
 
+  #
+  # FUNCTIONS
+  # 
   preload: ->
     @stage.disableVisibilityChange = true
     return
 
+  create: ->
+    @land = @add.tileSprite(0, 0, 800, 600, 'sea')
+
+    @gameTimer = @time.create(false)
+    @gameTimer.start()
+    @setupEnemies()
+    @setupExplosions()
+    @setupRewardTexts()
+
+    @crosshair = @add.sprite(400, 300, 'crosshair')
+    @crosshair.anchor.setTo(0.5, 0.5)
+    @crosshair.speed = 300
+    @physics.enable(@crosshair, Phaser.Physics.ARCADE)
+    @crosshair.body.collideWorldBounds = true
+    @cursors = @input.keyboard.createCursorKeys()
+
+    @setupBullets()
+    @setupDeck()
+    @setupText()
+
+    @levelUpEnemy(0)
+
+    return
+
+  update: ->
+    @land.tilePosition.y += 0.5
+    @checkEnemyLevelUp()
+
+    @fire() if @input.activePointer.isDown or @input.keyboard.isDown(Phaser.Keyboard.Z)
+
+    @toggleBullets()
+
+    @checkCollision()
+    @spawnEnemies()
+
+
+    if @ammo <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length == 0
+      @add.text(400, 250, "GAME OVER", { font: '72px Army Wide', fill: '#fff' }).anchor.setTo(0.5, 0.5)
+
+  render: ->
+    @timeText.text = @timeDisplay()
+    return
+
+  timeDisplay: ->
+    ms = @gameTimer.ms
+    minutes = Math.floor(ms / 60000)
+    seconds = ms - (minutes * 60000)
+    ms = seconds % 1000
+    seconds = Math.floor(seconds / 1000)
+    "#{minutes}' #{('00' + seconds).slice(-2)}\" #{('000' + ms).slice(-3)}"
+
+  # 
+  # CREATE functions
+  #
+  setupEnemies: ->
+    @enemies = []
+    @enemiesGroup = @add.group()
+    for i in [0...@ENEMY_TYPES.length]
+      enemies = @add.group()
+      enemies.enableBody = true
+      enemies.physicsBodyType = Phaser.Physics.ARCADE
+      @enemies.push(enemies)
+
+    for i in [5, 2, 6, 4, 3, 1, 0]
+      @enemiesGroup.add(@enemies[i])
+
+  setupExplosions: ->
+    @explosions = @add.group()
+    @explosions.enableBody = true
+    @explosions.physicsBodyType = Phaser.Physics.ARCADE
+    @explosions.createMultiple(200, 'explosion')
+    @explosions.forEach(((explosion) ->
+      explosion.animations.add 'explosion'
+    ), this)
+
+    @explosions2 = @add.group()
+    @explosions2.enableBody = true
+    @explosions2.physicsBodyType = Phaser.Physics.ARCADE
+    @explosions2.createMultiple(50, 'explosion2')
+    @explosions2.forEach(((explosion) ->
+      explosion.animations.add 'explosion'
+    ), this)
+
+  setupRewardTexts: ->
+    @rewards = []
+    for i in [0...@ENEMY_TYPES.length]
+      rewards = @add.group()
+      rewards.createMultiple(50, 'reward' + i)
+      rewards.forEach(((reward) ->
+        reward.animations.add 'reward' + i
+      ), this)
+      @rewards.push(rewards)
+
+  setupBullets: ->
+    @bullets = []
+    for bullet in @BULLET_TYPES
+      bullets = @add.group()
+      bullets.enableBody = true
+      bullets.physicsBodyType = Phaser.Physics.ARCADE
+      # console.log 'bullet-' + bullet
+      bullets.createMultiple(50, 'bullet-' + bullet, 0, false)
+      bullets.setAll('anchor.x', 0.5)
+      bullets.setAll('anchor.y', 0.5)
+      bullets.setAll('outOfBoundsKill', true)
+      bullets.setAll('checkWorldBounds', true)
+      @bullets.push bullets
+
+  setupDeck: ->
+    @deck = @add.sprite(0, 520, 'deck')
+
+    @turrets = {}
+    @bbtn = {}
+    @bbtnd = {}
+    # toggle bullet types
+    for i in @BULLET_TYPES
+      @turrets[i] = @add.sprite(400, 525, 'turret-' + i)
+      @turrets[i].anchor.setTo(0.3, 0.5)
+      @bbtnd[i] = @add.sprite(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535, 'bbtnd-' + i)
+      @bbtnd[i].inputEnabled = true
+      @bbtn[i] = @add.sprite(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535, 'bbtn-' + i)
+      @bbtn[i].inputEnabled = true
+      @bbtnd[i].kill()
+
+      # closure required for toggle
+      ((spriteGroup, disabledSpriteGroup, i, game) ->
+        spriteGroup.events.onInputDown.add( () ->
+          game.selectedBullet = i
+        , this)
+        disabledSpriteGroup.events.onInputDown.add( () ->
+          game.selectedBullet = i
+        , this)
+      )(@bbtn[i], @bbtnd[i], i, this)
+
+  setupText: ->
+    @timeText = @add.text(400, 15, '', { font: '20px Army Wide', fill: '#fff' })
+    @timeText.anchor.setTo(0.5, 0.5)
+
+    @ammoText = @add.text(790, 15, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff' })
+    @ammoText.anchor.setTo(1, 0.5)
+
+    @killText = @add.text(10, 35, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
+    @killText.anchor.setTo(0, 0.5)
+
+    @add.text(180, 585, "Shot Type", { font: '14px Army Wide', fill: '#fff' }).anchor.setTo(0.5, 0.5)
+
+    @nextWaveText = @add.text(10, 15, "Next Level: #{@nextEnemyLvlUp} kills", { font: '14px Army Wide', fill: '#fff' })
+    @nextWaveText.anchor.setTo(0, 0.5)
+
+    @enemyLvlUpText = @add.text(400, 250, "", { font: '20px Army Wide', fill: '#fff' })
+    @enemyLvlUpText.anchor.setTo(0.5, 0.5)
+
+  #
+  # UPDATE functions
+  #
   fire: ->
     bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
     ammoReq = @AMMO_REQ[@selectedBullet]
-    if (@ammo >= ammoReq and @game.time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0 and @game.input.activePointer.y < 520)
-      @nextFire[@selectedBullet] = @game.time.now + @FIRE_RATE[@selectedBullet]
+    if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0)
+      @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet]
       bullet = bullets.getFirstExists(false)
-      angle = @game.physics.arcade.angleToPointer(@turrets[@selectedBullet])
+      angle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
       offset = @BULLET_OFFSET[@selectedBullet]
       bullet.reset(400 + Math.cos(angle) * offset, 525 + Math.sin(angle) * offset)
-      bullet.rotation = @game.physics.arcade.moveToPointer(bullet, 200, @game.input.activePointer)
+      @physics.arcade.moveToObject(bullet, @crosshair, 200)
       @ammo-= ammoReq
       @ammoText.text = 'Energy: ' + @ammo
       if @ammo < 25
         @ammoText.setStyle({font: '14px Army Wide', fill: "#f22"})
+
+  toggleBullets: ->
+    if @input.keyboard.isDown(Phaser.Keyboard.ONE) and not (@selectedBullet is 'small')
+      @selectedBullet = 'small'
+    else if @input.keyboard.isDown(Phaser.Keyboard.TWO) and not (@selectedBullet is 'large')
+      @selectedBullet = 'large'
+    else if @input.keyboard.isDown(Phaser.Keyboard.THREE) and not (@selectedBullet is 'burst')
+      @selectedBullet = 'burst'
+
+    # change turret sprite
+    if @lastSelectedBullet isnt @selectedBullet
+      for i in @BULLET_TYPES
+        unless i is @selectedBullet
+          @turrets[i].kill()
+          @bbtn[i].kill()
+          @bbtnd[i].reset(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535)
+        else
+          @bbtnd[i].kill()
+          @bbtn[i].reset(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535)
+      @turrets[@selectedBullet].reset(400, 525)
+      @lastSelectedBullet = @selectedBullet
+
+    @crosshair.body.velocity.x = 0
+    @crosshair.body.velocity.y = 0
+    if @input.activePointer.withinGame
+      @crosshair.x = @input.activePointer.worldX
+      @crosshair.y = @input.activePointer.worldY
+    else
+      if @cursors.left.isDown
+        @crosshair.body.velocity.x = -@crosshair.speed
+      else if @cursors.right.isDown
+        @crosshair.body.velocity.x = @crosshair.speed
+
+      if @cursors.up.isDown
+        @crosshair.body.velocity.y = -@crosshair.speed
+      else if @cursors.down.isDown
+        @crosshair.body.velocity.y = @crosshair.speed
+
+    turretAngle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
+    @turrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
+
+  checkCollision: ->
+    for i in [0...@ENEMY_TYPES.length]
+      for j in [0...@BULLET_TYPES.length]
+        @physics.arcade.overlap(@bullets[j], @enemies[i], @collisionHandler, null, this)
+      @enemies[i].forEach( (enemy) ->
+        enemy.kill() if enemy.y > 530 or enemy.x < -50 or enemy.x > 850
+      , this)
+
+  spawnEnemies: ->
+    #console.log "#{game.time.now} #{nextEnemy0} #{enemies.countDead()}"
+    if @time.now > @nextEnemy[0] and @enemies[0].countDead() > 0
+      @nextEnemy[0] = @time.now + @enemyRate[0]
+      enemy = @enemies[0].getFirstExists(false)
+      enemy.reset(20 + Math.random() * 760, 0)
+      enemy.body.velocity.y = 30 + Math.random() * 30
+      enemy.play('fly')
+
+    if @time.now > @nextEnemy[1] and @enemies[1].countDead() > 0
+      @nextEnemy[1] = @time.now + @enemyRate[1]
+      enemy = @enemies[1].getFirstExists(false)
+      if Math.random() < 0.5
+        enemy.reset(0, 20 + Math.random() * 320)
+        enemy.body.velocity.x = 40 + Math.random() * 40
+        enemy.rotation = -Math.PI / 2
+      else
+        enemy.reset(800, 20 + Math.random() * 320)
+        enemy.body.velocity.x = -(40 + Math.random() * 40)
+        enemy.rotation = Math.PI / 2
+      enemy.body.velocity.y = 30
+      enemy.play('fly')
+
+    if @time.now > @nextEnemy[2] and @enemies[2].countDead() > 0
+      y = 20 + Math.random() * 480
+      unless (sub for sub in @enemies[2].children when sub.alive and sub.y <= y + 32 and sub.y + 32 >= y).length > 0 or
+          (dest for dest in @enemies[5].children when dest.alive and dest.y <= y + 32 and dest.y + 32 >= y).length > 0
+        @nextEnemy[2] = @time.now + @enemyRate[2]
+        enemy = @enemies[2].getFirstExists(false)
+        if Math.random() < 0.5
+          enemy.reset(Math.random() * 200, y)
+          enemy.rotation = -Math.PI / 2
+          enemy.body.velocity.x = 20 + Math.random() * 20
+        else
+          enemy.reset(800 - Math.random() * 200, y)
+          enemy.rotation = Math.PI / 2
+          enemy.body.velocity.x = -(20 + Math.random() * 20)
+        enemy.body.setSize(98, 32, 0, 0)
+        enemy.play('rise')
+
+    if @time.now > @nextEnemy[3] and @enemies[3].countDead() > 0
+      @nextEnemy[3] = @time.now + @enemyRate[3]
+      enemy = @enemies[3].getFirstExists(false)
+      if Math.random() < 0.5
+        enemy.reset(0, 20 + Math.random() * 320)
+        enemy.body.velocity.x = 60 + Math.random() * 60
+        enemy.rotation = -Math.PI / 2
+      else
+        enemy.reset(800, 20 + Math.random() * 320)
+        enemy.body.velocity.x = -(60 + Math.random() * 60)
+        enemy.rotation = Math.PI / 2
+      enemy.body.velocity.y = 30
+      enemy.play('fly')
+
+    if @time.now > @nextEnemy[4] and @enemies[4].countDead() > 0
+      @nextEnemy[4] = @time.now + @enemyRate[4]
+      enemy = @enemies[4].getFirstExists(false)
+      enemy.reset(40 + Math.random() * 740, 0)
+      enemy.body.velocity.y = 30 + Math.random() * 20
+      enemy.play('fly')
+
+    if @time.now > @nextEnemy[5] and @enemies[5].countDead() > 0
+      y = 20 + Math.random() * 480
+      unless (sub for sub in @enemies[2].children when sub.alive and sub.y <= y + 32 and sub.y + 32 >= y).length > 0 or
+          (dest for dest in @enemies[5].children when dest.alive and dest.y <= y + 32 and dest.y + 32 >= y).length > 0
+        @nextEnemy[5] = @time.now + @enemyRate[5]
+        enemy = @enemies[5].getFirstExists(false)
+        if Math.random() < 0.5
+          enemy.reset(-45, y)
+          enemy.rotation = -Math.PI / 2
+          enemy.body.velocity.x = 10 + Math.random() * 10
+        else
+          enemy.reset(845, y)
+          enemy.rotation = Math.PI / 2
+          enemy.body.velocity.x = -(10 + Math.random() * 10)
+
+        enemy.body.setSize(174, 32, 0, 0)
+        enemy.play('cruise')
+
+    if @time.now > @nextEnemy[6] and @enemies[6].countDead() > 0
+      @nextEnemy[6] = @time.now + @enemyRate[6]
+      enemy = @enemies[6].getFirstExists(false)
+      enemy.reset(10 + Math.random() * 790, 0)
+      enemy.body.velocity.y = 100 + Math.random() * 200
+      enemy.play('fly')
+
+  collisionHandler: (bullet, enemy) ->
+    if bullet.key is 'bullet-burst'
+      bullets = @bullets[0]
+      angle = Math.random() * 2 * Math.PI
+      for i in [0..4]
+        b = bullets.getFirstExists(false)
+        b.reset(bullet.x, bullet.y)
+        b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5)) * 200
+        b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5)) * 200
+
+    bullet.kill()
+    if Math.random() < @HIT_RATE[bullet.key][enemy.key]
+      i = parseInt(enemy.key.slice(5))
+      explosion = switch enemy.key
+        when "enemy4", "enemy5", "enemy6"
+          @explosions2.getFirstExists(false)
+        else
+          @explosions.getFirstExists(false)
+
+      x = enemy.body.x
+      y = enemy.body.y
+      switch enemy.key
+        when "enemy2"
+          x += 49
+        when "enemy4"
+          x += 16
+          y += 5
+        when "enemy5"
+          x += 51
+          y -= 16
+        when "enemy6"
+          x -= 16
+          y -= 16
+      
+      explosion.reset(x, y)
+      explosion.body.velocity.x = enemy.body.velocity.x
+      explosion.body.velocity.y = enemy.body.velocity.y
+      enemy.kill()
+      explosion.play('explosion', 15, false, true)
+
+      reward = @rewards[i].getFirstExists(false)
+      switch enemy.key
+        when "enemy4", "enemy5", "enemy6"
+          y += 16
+      reward.reset(x, y)
+      reward.play('reward' + i, 30, false, true)
+      @ammo += @REWARD[enemy.key]
+      @ammoText.text = 'Energy: ' + @ammo
+      if @ammo > 25
+        @ammoText.setStyle({font: '14px Army Wide', fill: "#fff"})
+      @kills++
+      @killText.text = "Kills: " + @kills
+    else
+      enemy.play('hit')
+  checkEnemyLevelUp: ->
+    if @kills >= @nextEnemyLvlUp
+      @levelUpEnemy(@nextEnemyLvlUp)
+
+  levelUpEnemy: (kills) ->
+    return unless @ENEMY_LVL_CHART[kills]?
+    action = @ENEMY_LVL_CHART[kills].action
+    switch action[0]
+      when "unlock"
+        @unlockEnemy(action[1], action[2], action[3])
+      when "setSpawnRate"
+        @enemyRate[action[1]] = action[2]
+        @enemyLvlUpText.text = @ENEMY_TYPES[action[1]] + "s are arriving at a faster rate!"
+        @setLvlUpExpire()
+      when "setMaxCount"
+        @setMaxCount(action[1], action[2])
+
+    @nextEnemyLvlUp = @ENEMY_LVL_CHART[kills].next
+    if @nextEnemyLvlUp?
+      @nextWaveText.text =  "Next Level: #{@nextEnemyLvlUp} kills"
+    else
+      @nextWaveText.text =  "Max Level Reached"
+
+  unlockEnemy: (enemyIdx, spawnRate, maxCount) ->
+    @enemyRate[enemyIdx] = spawnRate
+    @enemies[enemyIdx].removeAll(true)
+    @enemies[enemyIdx].createMultiple(maxCount, 'enemy' + enemyIdx, 0, false)
+    @setSpriteInfo(enemyIdx)
+    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have appeared!"
+    @setLvlUpExpire()
+
+  setMaxCount: (enemyIdx, maxCount) ->
+    current = @enemies[enemyIdx].iterate('exists', true, Phaser.Group.RETURN_TOTAL) + @enemies[enemyIdx].iterate('exists', false, Phaser.Group.RETURN_TOTAL)
+    if current < maxCount
+      @enemies[enemyIdx].createMultiple(maxCount - current, 'enemy' + enemyIdx, 0, false)
+    @setSpriteInfo(enemyIdx)
+    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have increased in numbers!"
+    @setLvlUpExpire()
+
+  setLvlUpExpire: ->
+    @time.events.add(Phaser.Timer.SECOND * 5, ->
+      @enemyLvlUpText.text = ""
+    , this)
 
   setSpriteInfo: (enemyIdx) ->
     switch enemyIdx
@@ -266,321 +742,11 @@ class Game
     @enemies[enemyIdx].setAll('anchor.x', 0.5)
     @enemies[enemyIdx].setAll('anchor.y', 0.5)
 
-  checkEnemyLevelUp: ->
-    if @kills >= @nextEnemyLvlUp
-      @levelUpEnemy(@nextEnemyLvlUp)
-
-  levelUpEnemy: (kills) ->
-    return unless @ENEMY_LVL_CHART[kills]?
-    action = @ENEMY_LVL_CHART[kills].action
-    switch action[0]
-      when "unlock"
-        @unlockEnemy(action[1], action[2], action[3])
-      when "setSpawnRate"
-        @enemyRate[action[1]] = action[2]
-        @enemyLvlUpText.text = @ENEMY_TYPES[action[1]] + "s are arriving at a faster rate!"
-        @enemyLvlUpExpire = @game.time.now + 5000
-      when "setMaxCount"
-        @setMaxCount(action[1], action[2])
-
-    @nextEnemyLvlUp = @ENEMY_LVL_CHART[kills].next
-    if @nextEnemyLvlUp?
-      @nextWaveText.text =  "Next Level: #{@nextEnemyLvlUp} kills"
-    else
-      @nextWaveText.text =  "Max Level Reached"
-
-  unlockEnemy: (enemyIdx, spawnRate, maxCount) ->
-    @enemyRate[enemyIdx] = spawnRate
-    @enemies[enemyIdx].removeAll(true)
-    @enemies[enemyIdx].createMultiple(maxCount, 'enemy' + enemyIdx, 0, false)
-    @setSpriteInfo(enemyIdx)
-    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have appeared!"
-    @enemyLvlUpExpire = @game.time.now + 5000
-
-  setMaxCount: (enemyIdx, maxCount) ->
-    current = @enemies[enemyIdx].iterate('exists', true, Phaser.Group.RETURN_TOTAL) + @enemies[enemyIdx].iterate('exists', false, Phaser.Group.RETURN_TOTAL)
-    if current < maxCount
-      @enemies[enemyIdx].createMultiple(maxCount - current, 'enemy' + enemyIdx, 0, false)
-    @setSpriteInfo(enemyIdx)
-    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have increased in numbers!"
-    @enemyLvlUpExpire = @game.time.now + 5000
-
-
-  create: ->
-    @land = @game.add.tileSprite(0, 0, 800, 600, 'sea')
-
-    @enemies = []
-    @enemiesGroup = @game.add.group()
-    for i in [0...@ENEMY_TYPES.length]
-      enemies = @game.add.group()
-      enemies.enableBody = true
-      enemies.physicsBodyType = Phaser.Physics.ARCADE
-      @enemies.push(enemies)
-
-    for i in [5, 2, 6, 4, 3, 1, 0]
-      @enemiesGroup.add(@enemies[i])
-
-    @explosions = @game.add.group()
-    @explosions.createMultiple(200, 'explosion')
-    @explosions.forEach(((explosion) ->
-      explosion.animations.add 'explosion'
-    ), this)
-
-    @explosions2 = @game.add.group()
-    @explosions2.createMultiple(50, 'explosion2')
-    @explosions2.forEach(((explosion) ->
-      explosion.animations.add 'explosion2'
-    ), this)
-
-    @rewards = []
-    for i in [0...@ENEMY_TYPES.length]
-      rewards = @game.add.group()
-      rewards.createMultiple(50, 'reward' + i)
-      rewards.forEach(((reward) ->
-        reward.animations.add 'reward' + i
-      ), this)
-      @rewards.push(rewards)
-
-
-    @bullets = []
-    for bullet in @BULLET_TYPES
-      bullets = @game.add.group()
-      bullets.enableBody = true
-      bullets.physicsBodyType = Phaser.Physics.ARCADE
-      # console.log 'bullet-' + bullet
-      bullets.createMultiple(50, 'bullet-' + bullet, 0, false)
-      bullets.setAll('anchor.x', 0.5)
-      bullets.setAll('anchor.y', 0.5)
-      bullets.setAll('outOfBoundsKill', true)
-      bullets.setAll('checkWorldBounds', true)
-      @bullets.push bullets
-
-    @deck = @game.add.sprite(0, 520, 'deck')
-
-    @turrets = {}
-    @bbtn = {}
-    @bbtnd = {}
-    for i in @BULLET_TYPES
-      @turrets[i] = @game.add.sprite(400, 525, 'turret-' + i)
-      @turrets[i].anchor.setTo(0.3, 0.5)
-      @bbtnd[i] = @game.add.sprite(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535, 'bbtnd-' + i)
-      @bbtnd[i].inputEnabled = true
-      @bbtn[i] = @game.add.sprite(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535, 'bbtn-' + i)
-      @bbtn[i].inputEnabled = true
-      @bbtnd[i].kill()
-
-      ((spriteGroup, disabledSpriteGroup, i, game) ->
-        spriteGroup.events.onInputDown.add( () ->
-          game.selectedBullet = i
-        , this)
-        disabledSpriteGroup.events.onInputDown.add( () ->
-          game.selectedBullet = i
-        , this)
-      )(@bbtn[i], @bbtnd[i], i, this)
-
-    @ammoText = @game.add.text(400, 545, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff' })
-    @ammoText.anchor.setTo(0.5, 0.5)
-
-    @killText = @game.add.text(400, 560, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
-    @killText.anchor.setTo(0.5, 0.5)
-
-    @game.add.text(180, 585, "Shot Type", { font: '14px Army Wide', fill: '#fff' }).anchor.setTo(0.5, 0.5)
-
-    @nextWaveText = @game.add.text(400, 580, "Next Level: #{@nextEnemyLvlUp} kills", { font: '14px Army Wide', fill: '#fff' })
-    @nextWaveText.anchor.setTo(0.5, 0.5)
-
-    @enemyLvlUpText = @game.add.text(10, 20, "", { font: '14px Army Wide', fill: '#fff' })
-    @enemyLvlUpText.anchor.setTo(0, 0.5)
-    
-    @levelUpEnemy(0)
-
-    return
-
-  update: ->
-    @checkEnemyLevelUp()
-    @fire() if @game.input.activePointer.isDown
-    if @game.input.keyboard.isDown(Phaser.Keyboard.ONE) and not (@selectedBullet is 'small')
-      @selectedBullet = 'small'
-    else if @game.input.keyboard.isDown(Phaser.Keyboard.TWO) and not (@selectedBullet is 'large')
-      @selectedBullet = 'large'
-    else if @game.input.keyboard.isDown(Phaser.Keyboard.THREE) and not (@selectedBullet is 'burst')
-      @selectedBullet = 'burst'
-
-    if @lastSelectedBullet isnt @selectedBullet
-      for i in @BULLET_TYPES
-        unless i is @selectedBullet
-          @turrets[i].kill()
-          @bbtn[i].kill()
-          @bbtnd[i].reset(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535)
-        else
-          @bbtnd[i].kill()
-          @bbtn[i].reset(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535)
-      @turrets[@selectedBullet].reset(400, 525)
-      @lastSelectedBullet = @selectedBullet
-
-    @land.tilePosition.y += 0.5
-    turretAngle = @game.physics.arcade.angleToPointer(@turrets[@selectedBullet])
-    @turrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
-    for i in [0...@ENEMY_TYPES.length]
-      for j in [0...@BULLET_TYPES.length]
-        @game.physics.arcade.overlap(@bullets[j], @enemies[i], @collisionHandler, null, this)
-      @enemies[i].forEach( (enemy) ->
-        enemy.kill() if enemy.y > 530 or enemy.x < -50 or enemy.x > 850
-      , this)
-
-  render: ->
-    if @game.time.now > @enemyLvlUpExpire
-      @enemyLvlUpText.text = ""
-    #console.log "#{game.time.now} #{nextEnemy0} #{enemies.countDead()}"
-    if @game.time.now > @nextEnemy[0] and @enemies[0].countDead() > 0
-      @nextEnemy[0] = @game.time.now + @enemyRate[0]
-      enemy = @enemies[0].getFirstExists(false)
-      enemy.reset(20 + Math.random() * 760, 0)
-      enemy.body.velocity.y = 30 + Math.random() * 30
-      enemy.play('fly')
-
-    if @game.time.now > @nextEnemy[1] and @enemies[1].countDead() > 0
-      @nextEnemy[1] = @game.time.now + @enemyRate[1]
-      enemy = @enemies[1].getFirstExists(false)
-      if Math.random() < 0.5
-        enemy.reset(0, 20 + Math.random() * 320)
-        enemy.body.velocity.x = 40 + Math.random() * 40
-        enemy.rotation = -Math.PI / 2
-      else
-        enemy.reset(800, 20 + Math.random() * 320)
-        enemy.body.velocity.x = -(40 + Math.random() * 40)
-        enemy.rotation = Math.PI / 2
-      enemy.body.velocity.y = 30
-      enemy.play('fly')
-
-    if @game.time.now > @nextEnemy[2] and @enemies[2].countDead() > 0
-      y = 20 + Math.random() * 480
-      unless (sub for sub in @enemies[2].children when sub.alive and sub.y <= y + 32 and sub.y + 32 >= y).length > 0 or
-          (dest for dest in @enemies[5].children when dest.alive and dest.y <= y + 32 and dest.y + 32 >= y).length > 0
-        @nextEnemy[2] = @game.time.now + @enemyRate[2]
-        enemy = @enemies[2].getFirstExists(false)
-        if Math.random() < 0.5
-          enemy.reset(Math.random() * 200, y)
-          enemy.rotation = -Math.PI / 2
-          enemy.body.velocity.x = 20 + Math.random() * 20
-        else
-          enemy.reset(800 - Math.random() * 200, y)
-          enemy.rotation = Math.PI / 2
-          enemy.body.velocity.x = -(20 + Math.random() * 20)
-        enemy.body.setSize(98, 32, 0, 0)
-        enemy.play('rise')
-
-    if @game.time.now > @nextEnemy[3] and @enemies[3].countDead() > 0
-      @nextEnemy[3] = @game.time.now + @enemyRate[3]
-      enemy = @enemies[3].getFirstExists(false)
-      if Math.random() < 0.5
-        enemy.reset(0, 20 + Math.random() * 320)
-        enemy.body.velocity.x = 60 + Math.random() * 60
-        enemy.rotation = -Math.PI / 2
-      else
-        enemy.reset(800, 20 + Math.random() * 320)
-        enemy.body.velocity.x = -(60 + Math.random() * 60)
-        enemy.rotation = Math.PI / 2
-      enemy.body.velocity.y = 30
-      enemy.play('fly')
-
-    if @game.time.now > @nextEnemy[4] and @enemies[4].countDead() > 0
-      @nextEnemy[4] = @game.time.now + @enemyRate[4]
-      enemy = @enemies[4].getFirstExists(false)
-      enemy.reset(40 + Math.random() * 740, 0)
-      enemy.body.velocity.y = 30 + Math.random() * 20
-      enemy.play('fly')
-
-    if @game.time.now > @nextEnemy[5] and @enemies[5].countDead() > 0
-      y = 20 + Math.random() * 480
-      unless (sub for sub in @enemies[2].children when sub.alive and sub.y <= y + 32 and sub.y + 32 >= y).length > 0 or
-          (dest for dest in @enemies[5].children when dest.alive and dest.y <= y + 32 and dest.y + 32 >= y).length > 0
-        @nextEnemy[5] = @game.time.now + @enemyRate[5]
-        enemy = @enemies[5].getFirstExists(false)
-        if Math.random() < 0.5
-          enemy.reset(-45, y)
-          enemy.rotation = -Math.PI / 2
-          enemy.body.velocity.x = 10 + Math.random() * 10
-        else
-          enemy.reset(845, y)
-          enemy.rotation = Math.PI / 2
-          enemy.body.velocity.x = -(10 + Math.random() * 10)
-
-        enemy.body.setSize(174, 32, 0, 0)
-        enemy.play('cruise')
-
-    if @game.time.now > @nextEnemy[6] and @enemies[6].countDead() > 0
-      @nextEnemy[6] = @game.time.now + @enemyRate[6]
-      enemy = @enemies[6].getFirstExists(false)
-      enemy.reset(10 + Math.random() * 790, 0)
-      enemy.body.velocity.y = 100 + Math.random() * 200
-      enemy.play('fly')
-
-    if @ammo <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length == 0
-      @game.add.text(400, 250, "GAME OVER", { font: '72px Army Wide', fill: '#fff' }).anchor.setTo(0.5, 0.5)
-
-    return
-
-  collisionHandler: (bullet, enemy) ->
-    if bullet.key is 'bullet-burst'
-      bullets = @bullets[0]
-      angle = Math.random() * 2 * Math.PI
-      for i in [0..4]
-        b = bullets.getFirstExists(false)
-        b.reset(bullet.x, bullet.y)
-        b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5)) * 200
-        b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5)) * 200
-
-    bullet.kill()
-    if Math.random() < @HIT_RATE[bullet.key][enemy.key]
-      i = parseInt(enemy.key.slice(5))
-      enemy.kill()
-      explosion = switch enemy.key
-        when "enemy4", "enemy5", "enemy6"
-          @explosions2.getFirstExists(false)
-        else
-          @explosions.getFirstExists(false)
-
-      x = enemy.body.x
-      y = enemy.body.y
-      switch enemy.key
-        when "enemy2"
-          x += 49
-        when "enemy4"
-          x += 16
-          y += 5
-        when "enemy5"
-          x += 51
-          y -= 16
-        when "enemy6"
-          x -= 16
-          y -= 16
-      
-      explosion.reset(x, y)
-      switch enemy.key
-        when "enemy4", "enemy5", "enemy6"
-          explosion.play('explosion2', 30, false, true)
-        else
-          explosion.play('explosion', 30, false, true)
-
-      reward = @rewards[i].getFirstExists(false)
-      switch enemy.key
-        when "enemy4", "enemy5", "enemy6"
-          y += 16
-      reward.reset(x, y)
-      reward.play('reward' + i, 30, false, true)
-      @ammo += @REWARD[enemy.key]
-      @ammoText.text = 'Energy: ' + @ammo
-      if @ammo > 25
-        @ammoText.setStyle({font: '14px Army Wide', fill: "#fff"})
-      @kills++
-      @killText.text = "Kills: " + @kills
-    else
-      enemy.play('hit')
 
 game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-container')
 game.state.add('Boot', Boot)
 game.state.add('Preloader', Preloader)
+game.state.add('MainMenu', MainMenu)
 game.state.add('Game', Game)
 
 game.state.start('Boot')
