@@ -63,16 +63,11 @@ class Preloader
     <% end %>
     <% [0, 1, 3].each do |x| %>
     @load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
-    @load.spritesheet('reward<%= x %>', '<%= image_path("reward#{x}.png") %>', 32, 32, 10)
     <% end %>
     @load.spritesheet('enemy2', '<%= image_path("enemy2.png") %>', 32, 98)
-    @load.spritesheet('reward2', '<%= image_path("reward2.png") %>', 32, 32, 10)
     @load.spritesheet('enemy4', '<%= image_path("enemy4.png") %>', 93, 75)
-    @load.spritesheet('reward4', '<%= image_path("reward4.png") %>', 64, 32, 10)
     @load.spritesheet('enemy5', '<%= image_path("enemy5.png") %>', 32, 174)
-    @load.spritesheet('reward5', '<%= image_path("reward5.png") %>', 64, 32, 10)
     @load.spritesheet('enemy6', '<%= image_path("enemy6.png") %>', 32, 32)
-    @load.spritesheet('reward6', '<%= image_path("reward6.png") %>', 64, 32, 10)
 
     @load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
     @load.spritesheet('explosion2', '<%= image_path("explosion2.png") %>', 64, 64, 7)
@@ -320,7 +315,6 @@ class Game
     @gameTimer.start()
     @setupEnemies()
     @setupExplosions()
-    @setupRewardTexts()
 
     @crosshair = @add.sprite(400, 300, 'crosshair')
     @crosshair.anchor.setTo(0.5, 0.5)
@@ -387,24 +381,18 @@ class Game
     @explosions.forEach(((explosion) ->
       explosion.animations.add 'explosion'
     ), this)
+    @explosions.setAll('anchor.x', 0.5)
+    @explosions.setAll('anchor.y', 0.5)
 
     @explosions2 = @add.group()
     @explosions2.enableBody = true
     @explosions2.physicsBodyType = Phaser.Physics.ARCADE
-    @explosions2.createMultiple(50, 'explosion2')
+    @explosions2.createMultiple(10, 'explosion2')
     @explosions2.forEach(((explosion) ->
       explosion.animations.add 'explosion'
     ), this)
-
-  setupRewardTexts: ->
-    @rewards = []
-    for i in [0...@ENEMY_TYPES.length]
-      rewards = @add.group()
-      rewards.createMultiple(50, 'reward' + i)
-      rewards.forEach(((reward) ->
-        reward.animations.add 'reward' + i
-      ), this)
-      @rewards.push(rewards)
+    @explosions2.setAll('anchor.x', 0.5)
+    @explosions2.setAll('anchor.y', 0.5)
 
   setupBullets: ->
     @bullets = []
@@ -635,33 +623,23 @@ class Game
         else
           @explosions.getFirstExists(false)
 
-      x = enemy.body.x
-      y = enemy.body.y
-      switch enemy.key
-        when "enemy2"
-          x += 49
-        when "enemy4"
-          x += 16
-          y += 5
-        when "enemy5"
-          x += 51
-          y -= 16
-        when "enemy6"
-          x -= 16
-          y -= 16
-      
-      explosion.reset(x, y)
+      explosion.reset(enemy.x, enemy.y)
       explosion.body.velocity.x = enemy.body.velocity.x
       explosion.body.velocity.y = enemy.body.velocity.y
       enemy.kill()
       explosion.play('explosion', 15, false, true)
 
-      reward = @rewards[i].getFirstExists(false)
-      switch enemy.key
-        when "enemy4", "enemy5", "enemy6"
-          y += 16
-      reward.reset(x, y)
-      reward.play('reward' + i, 30, false, true)
+      reward = @add.text(enemy.x, enemy.y, "#{@REWARD[enemy.key]}", { font: '16px Army Wide', fill: '#fff' })
+      reward.anchor.setTo(0.5, 0.5)
+      rise = @add.tween(reward)
+      rise.to({ y: enemy.y - 16 }, 250)
+      fade = @add.tween(reward)
+      fade.to({ y: enemy.y - 64, alpha: 0 })
+      rise.chain(fade)
+      fade.onComplete.add(->
+        this.destroy()
+      , reward)
+      rise.start()
       @ammo += @REWARD[enemy.key]
       @ammoText.text = 'Energy: ' + @ammo
       if @ammo > 25
