@@ -72,6 +72,13 @@ class Preloader
     @load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
     @load.spritesheet('explosion2', '<%= image_path("explosion2.png") %>', 64, 64, 7)
     @load.image('deck', '<%= image_path('deck.png') %>')
+    @load.spritesheet('sound', '<%= image_path('sound.png') %>', 24, 24)
+
+    @load.audio('fire', ['<%= audio_path("fire.wav") %>'])
+    @load.audio('burst', ['<%= audio_path("burst.wav") %>'])
+    @load.audio('explosion', ['<%= audio_path("explosion.wav") %>'])
+    @load.audio('explosion2', ['<%= audio_path("explosion2.wav") %>'])
+    @load.audio('damage', ['<%= audio_path("damage.wav") %>'])
 
   create: ->
     @state.start('MainMenu')
@@ -324,6 +331,7 @@ class Game
     @cursors = @input.keyboard.createCursorKeys()
 
     @setupBullets()
+    @setupAudio()
     @setupDeck()
     @setupText()
 
@@ -408,6 +416,13 @@ class Game
       bullets.setAll('checkWorldBounds', true)
       @bullets.push bullets
 
+  setupAudio: ->
+    @fireSFX = @add.audio('fire')
+    @burstSFX = @add.audio('burst')
+    @explosionSFX = @add.audio('explosion')
+    @explosion2SFX = @add.audio('explosion2')
+    @damageSFX = @add.audio('damage')
+
   setupDeck: ->
     @deck = @add.sprite(0, 520, 'deck')
 
@@ -433,6 +448,21 @@ class Game
           game.selectedBullet = i
         , this)
       )(@bbtn[i], @bbtnd[i], i, this)
+
+    @soundIcon = @add.sprite(700, 560, 'sound')
+    @soundIcon.anchor.setTo(0.5, 0.5)
+    @soundIcon.animations.add('on', [ 0 ])
+    @soundIcon.animations.add('off', [ 1 ])
+    @soundIcon.play('on')
+    @soundIcon.inputEnabled = true
+    @soundIcon.events.onInputDown.add( ->
+      if @sound.mute
+        @sound.mute = false
+        @soundIcon.play('on')
+      else
+        @sound.mute = true
+        @soundIcon.play('off')
+    , this)
 
   setupText: ->
     @timeText = @add.text(400, 15, '', { font: '20px Army Wide', fill: '#fff' })
@@ -460,6 +490,7 @@ class Game
     ammoReq = @AMMO_REQ[@selectedBullet]
     if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0)
       @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet]
+      @fireSFX.play()
       bullet = bullets.getFirstExists(false)
       angle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
       offset = @BULLET_OFFSET[@selectedBullet]
@@ -561,15 +592,19 @@ class Game
     if @time.now > @nextEnemy[3] and @enemies[3].countDead() > 0
       @nextEnemy[3] = @time.now + @enemyRate[3]
       enemy = @enemies[3].getFirstExists(false)
+      start = @rnd.integerInRange(20, 500)
+      end = @rnd.integerInRange(20, 500)
+      enemy.body.velocity.x = 60 + Math.random() * 60
       if Math.random() < 0.5
-        enemy.reset(0, 20 + Math.random() * 320)
-        enemy.body.velocity.x = 60 + Math.random() * 60
-        enemy.rotation = -Math.PI / 2
+        enemy.reset(0, start)
+        enemy.rotation = @physics.arcade.moveToXY(
+          enemy, 800, end, @rnd.integerInRange(60, 120)
+        ) - Math.PI / 2
       else
-        enemy.reset(800, 20 + Math.random() * 320)
-        enemy.body.velocity.x = -(60 + Math.random() * 60)
-        enemy.rotation = Math.PI / 2
-      enemy.body.velocity.y = 30
+        enemy.reset(800, start)
+        enemy.rotation = @physics.arcade.moveToXY(
+          enemy, 0, end, @rnd.integerInRange(60, 120)
+        ) - Math.PI / 2
       enemy.play('fly')
 
     if @time.now > @nextEnemy[4] and @enemies[4].countDead() > 0
@@ -613,14 +648,17 @@ class Game
         b.reset(bullet.x, bullet.y)
         b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5)) * 200
         b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5)) * 200
+      @burstSFX.play()
 
     bullet.kill()
     if Math.random() < @HIT_RATE[bullet.key][enemy.key]
       i = parseInt(enemy.key.slice(5))
       explosion = switch enemy.key
         when "enemy4", "enemy5", "enemy6"
+          @explosion2SFX.play()
           @explosions2.getFirstExists(false)
         else
+          @explosionSFX.play()
           @explosions.getFirstExists(false)
 
       explosion.reset(enemy.x, enemy.y)
@@ -648,6 +686,8 @@ class Game
       @killText.text = "Kills: " + @kills
     else
       enemy.play('hit')
+      @damageSFX.play()
+
   checkEnemyLevelUp: ->
     if @kills >= @nextEnemyLvlUp
       @levelUpEnemy(@nextEnemyLvlUp)
