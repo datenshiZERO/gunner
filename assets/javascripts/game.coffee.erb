@@ -55,9 +55,12 @@ class Preloader
 
     @load.image('sea', '<%= image_path('sea.png') %>')
     @load.image('crosshair', '<%= image_path('crosshair.png') %>')
+    @load.image('bomb', '<%= image_path('bomb.png') %>')
     <% %w{small large burst}.each do |x| %>
     @load.image('turret-<%= x %>', '<%= image_path("turret-#{x}.png") %>')
     @load.image('bullet-<%= x %>', '<%= image_path("bullet-#{x}.png") %>')
+    <% end %>
+    <% %w{small large burst single triple bomb}.each do |x| %>
     @load.image('bbtn-<%= x %>', '<%= image_path("bbtn-#{x}.png") %>')
     @load.image('bbtnd-<%= x %>', '<%= image_path("bbtnd-#{x}.png") %>')
     <% end %>
@@ -152,6 +155,7 @@ class Game
     @ammo = 100
     @kills = 0
     @selectedBullet = 'small'
+    @selectedFire = 'single'
 
   ENEMY_LVL_CHART:
     0:
@@ -255,6 +259,7 @@ class Game
       next: null
 
   BULLET_TYPES: ['small', 'large', 'burst']
+  FIRING_TYPES: ['single', 'triple', 'bomb']
 
   ENEMY_TYPES: ['Rookie Fighter', 'Regular Fighter', 'Submarine', 'Veteran Fighter', 'Bomber', 'Destroyer', 'Elite Fighter']
 
@@ -262,6 +267,9 @@ class Game
     small: 1
     large: 3
     burst: 8
+    single: 1
+    triple: 3
+    bomb: 10
 
   BULLET_OFFSET:
     small: 20
@@ -272,6 +280,9 @@ class Game
     small: 100
     large: 150
     burst: 250
+    single: 1
+    triple: 2.5
+    bomb: 5
 
   HIT_RATE:
     "bullet-small":
@@ -408,12 +419,17 @@ class Game
       bullets.enableBody = true
       bullets.physicsBodyType = Phaser.Physics.ARCADE
       # console.log 'bullet-' + bullet
-      bullets.createMultiple(50, 'bullet-' + bullet, 0, false)
+      bullets.createMultiple(100, 'bullet-' + bullet, 0, false)
       bullets.setAll('anchor.x', 0.5)
       bullets.setAll('anchor.y', 0.5)
       bullets.setAll('outOfBoundsKill', true)
       bullets.setAll('checkWorldBounds', true)
       @bullets.push bullets
+
+    @bombs = @add.group()
+    @bombs.createMultiple(10, 'bomb')
+    @bombs.setAll('anchor.x', 0.5)
+    @bombs.setAll('anchor.y', 0.5)
 
   setupAudio: ->
     @fireSFX = @add.audio('fire')
@@ -426,15 +442,21 @@ class Game
     @deck = @add.sprite(0, 520, 'deck')
 
     @turrets = {}
+    @leftTurrets = {}
+    @rightTurrets = {}
     @bbtn = {}
     @bbtnd = {}
     # toggle bullet types
     for i in @BULLET_TYPES
       @turrets[i] = @add.sprite(400, 525, 'turret-' + i)
       @turrets[i].anchor.setTo(0.3, 0.5)
-      @bbtnd[i] = @add.sprite(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535, 'bbtnd-' + i)
+      @leftTurrets[i] = @add.sprite(150, 525, 'turret-' + i)
+      @leftTurrets[i].anchor.setTo(0.3, 0.5)
+      @rightTurrets[i] = @add.sprite(650, 525, 'turret-' + i)
+      @rightTurrets[i].anchor.setTo(0.3, 0.5)
+      @bbtnd[i] = @add.sprite(200 + (@BULLET_TYPES.indexOf(i)) * 60, 545, 'bbtnd-' + i)
       @bbtnd[i].inputEnabled = true
-      @bbtn[i] = @add.sprite(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535, 'bbtn-' + i)
+      @bbtn[i] = @add.sprite(200 + (@BULLET_TYPES.indexOf(i)) * 60, 545, 'bbtn-' + i)
       @bbtn[i].inputEnabled = true
       @bbtnd[i].kill()
 
@@ -448,7 +470,23 @@ class Game
         , this)
       )(@bbtn[i], @bbtnd[i], i, this)
 
-    @soundIcon = @add.sprite(700, 560, 'sound')
+    for i in @FIRING_TYPES
+      @bbtnd[i] = @add.sprite(440 + (@FIRING_TYPES.indexOf(i)) * 60, 545, 'bbtnd-' + i)
+      @bbtnd[i].inputEnabled = true
+      @bbtn[i] = @add.sprite(440 + (@FIRING_TYPES.indexOf(i)) * 60, 545, 'bbtn-' + i)
+      @bbtn[i].inputEnabled = true
+      @bbtnd[i].kill()
+
+      ((spriteGroup, disabledSpriteGroup, i, game) ->
+        spriteGroup.events.onInputDown.add( () ->
+          game.selectedFire = i
+        , this)
+        disabledSpriteGroup.events.onInputDown.add( () ->
+          game.selectedFire = i
+        , this)
+      )(@bbtn[i], @bbtnd[i], i, this)
+
+    @soundIcon = @add.sprite(750, 560, 'sound')
     @soundIcon.anchor.setTo(0.5, 0.5)
     @soundIcon.animations.add('on', [ 0 ])
     @soundIcon.animations.add('off', [ 1 ])
@@ -473,8 +511,6 @@ class Game
     @killText = @add.text(10, 35, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
     @killText.anchor.setTo(0, 0.5)
 
-    @add.text(180, 585, "Shot Type", { font: '14px Army Wide', fill: '#fff' }).anchor.setTo(0.5, 0.5)
-
     @nextWaveText = @add.text(10, 15, "Next Level: #{@nextEnemyLvlUp} kills", { font: '14px Army Wide', fill: '#fff' })
     @nextWaveText.anchor.setTo(0, 0.5)
 
@@ -492,18 +528,42 @@ class Game
     else if @input.keyboard.isDown(Phaser.Keyboard.THREE) and not (@selectedBullet is 'burst')
       @selectedBullet = 'burst'
 
+    if @input.keyboard.isDown(Phaser.Keyboard.Q) and not (@selectedBullet is 'single')
+      @selectedFire = 'single'
+    else if @input.keyboard.isDown(Phaser.Keyboard.W) and not (@selectedBullet is 'triple')
+      @selectedFire = 'triple'
+    else if @input.keyboard.isDown(Phaser.Keyboard.E) and not (@selectedBullet is 'bomb')
+      @selectedFire = 'bomb'
+
     # change turret sprite
-    if @lastSelectedBullet isnt @selectedBullet
+    if @lastSelectedBullet isnt @selectedBullet or @lastSelectedFire isnt @selectedFire
       for i in @BULLET_TYPES
+        @turrets[i].kill()
+        @leftTurrets[i].kill()
+        @rightTurrets[i].kill()
         unless i is @selectedBullet
-          @turrets[i].kill()
           @bbtn[i].kill()
-          @bbtnd[i].reset(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535)
+          @bbtnd[i].revive()
         else
           @bbtnd[i].kill()
-          @bbtn[i].reset(100 + (@BULLET_TYPES.indexOf(i)) * 60, 535)
-      @turrets[@selectedBullet].reset(400, 525)
+          @bbtn[i].revive()
+
+      for i in @FIRING_TYPES
+        unless i is @selectedFire
+          @bbtn[i].kill()
+          @bbtnd[i].revive()
+        else
+          @bbtnd[i].kill()
+          @bbtn[i].revive()
+
+      if @selectedFire is 'single' or @selectedFire is 'triple'
+        @turrets[@selectedBullet].revive()
+      if @selectedFire is 'triple'
+        @leftTurrets[@selectedBullet].revive()
+        @rightTurrets[@selectedBullet].revive()
+
       @lastSelectedBullet = @selectedBullet
+      @lastSelectedFire = @selectedFire
 
     @crosshair.body.velocity.x = 0
     @crosshair.body.velocity.y = 0
@@ -521,24 +581,65 @@ class Game
       else if @cursors.down.isDown
         @crosshair.body.velocity.y = @crosshair.speed
 
-    turretAngle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
-    @turrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
+    if @input.activePointer.withinGame or (key for key, status of @cursors when status.isDown).length > 0
+      turretAngle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
+      @turrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
+
+      if @selectedFire is 'triple'
+        turretAngle = @physics.arcade.angleBetween(@leftTurrets[@selectedBullet], @crosshair)
+        @leftTurrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
+        turretAngle = @physics.arcade.angleBetween(@rightTurrets[@selectedBullet], @crosshair)
+        @rightTurrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
 
   fire: ->
+    return if @input.activePointer.isDown and @input.activePointer.worldY >= 520
+      
     bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
-    ammoReq = @AMMO_REQ[@selectedBullet]
-    if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0)
-      @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet]
+    ammoReq = @AMMO_REQ[@selectedBullet] * @AMMO_REQ[@selectedFire]
+    if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > @AMMO_REQ[@selectedBullet])
+      @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet] * @FIRE_RATE[@selectedFire]
       @fireSFX.play()
-      bullet = bullets.getFirstExists(false)
-      angle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
-      offset = @BULLET_OFFSET[@selectedBullet]
-      bullet.reset(400 + Math.cos(angle) * offset, 525 + Math.sin(angle) * offset)
-      @physics.arcade.moveToObject(bullet, @crosshair, 200)
+
+      if @selectedFire is 'single' or @selectedFire is 'triple'
+        @turretFire(@turrets[@selectedBullet], bullets)
+
+      if @selectedFire is 'triple'
+        @turretFire(@leftTurrets[@selectedBullet], bullets)
+        @turretFire(@rightTurrets[@selectedBullet], bullets)
+
+      if @selectedFire is 'bomb'
+        bomb = @bombs.getFirstExists(false)
+        bomb.reset(@crosshair.x, @crosshair.y)
+        bomb.shot = @selectedBullet
+        bomb.scale.setTo(3, 3)
+        @add.tween(bomb.scale).to({ x: 0.5, y: 0.5 }, 2000, Phaser.Easing.Linear.None, true)
+        rotate = @add.tween(bomb).to({ angle: 360 }, 2000)
+        rotate.onComplete.add( ->
+          t = @game.state.getCurrentState()
+          bullets = t.bullets[t.BULLET_TYPES.indexOf(@shot)]
+          angle = Math.random() * 2 * Math.PI
+          for i in [0..9]
+            b = bullets.getFirstExists(false)
+            b.reset(@x, @y)
+            b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 10)) * 200
+            b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 10)) * 200
+          @kill()
+          t.burstSFX.play()
+        , bomb)
+        rotate.start()
+
+
       @ammo-= ammoReq
       @ammoText.text = 'Energy: ' + @ammo
       if @ammo < 25
         @ammoText.setStyle({font: '14px Army Wide', fill: "#f22"})
+
+  turretFire: (turret, bullets) ->
+    bullet = bullets.getFirstExists(false)
+    angle = @physics.arcade.angleBetween(turret, @crosshair)
+    offset = @BULLET_OFFSET[@selectedBullet]
+    bullet.reset(turret.x + Math.cos(angle) * offset, turret.y + Math.sin(angle) * offset)
+    @physics.arcade.moveToObject(bullet, @crosshair, 200)
 
   checkCollision: ->
     for i in [0...@ENEMY_TYPES.length]
@@ -561,14 +662,13 @@ class Game
       @nextEnemy[1] = @time.now + @enemyRate[1]
       enemy = @enemies[1].getFirstExists(false)
       if Math.random() < 0.5
-        enemy.reset(0, 20 + Math.random() * 320)
+        enemy.reset(0, 20 + Math.random() * 420)
         enemy.body.velocity.x = 40 + Math.random() * 40
         enemy.rotation = -Math.PI / 2
       else
-        enemy.reset(800, 20 + Math.random() * 320)
+        enemy.reset(800, 20 + Math.random() * 420)
         enemy.body.velocity.x = -(40 + Math.random() * 40)
         enemy.rotation = Math.PI / 2
-      enemy.body.velocity.y = 30
       enemy.play('fly')
 
     if @time.now > @nextEnemy[2] and @enemies[2].countDead() > 0
@@ -674,7 +774,7 @@ class Game
       fade.to({ y: enemy.y - 64, alpha: 0 })
       rise.chain(fade)
       fade.onComplete.add(->
-        this.destroy()
+        @destroy()
       , reward)
       rise.start()
       @ammo += @REWARD[enemy.key]
