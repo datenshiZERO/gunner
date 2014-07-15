@@ -343,9 +343,8 @@ class Game
     @land.tilePosition.y += 0.5
     @checkEnemyLevelUp()
 
-    @fire() if @input.activePointer.isDown or @input.keyboard.isDown(Phaser.Keyboard.Z)
-
     @toggleBullets()
+    @fire() if @input.activePointer.isDown or @input.keyboard.isDown(Phaser.Keyboard.Z)
 
     @checkCollision()
     @spawnEnemies()
@@ -485,22 +484,6 @@ class Game
   #
   # UPDATE functions
   #
-  fire: ->
-    bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
-    ammoReq = @AMMO_REQ[@selectedBullet]
-    if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0)
-      @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet]
-      @fireSFX.play()
-      bullet = bullets.getFirstExists(false)
-      angle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
-      offset = @BULLET_OFFSET[@selectedBullet]
-      bullet.reset(400 + Math.cos(angle) * offset, 525 + Math.sin(angle) * offset)
-      @physics.arcade.moveToObject(bullet, @crosshair, 200)
-      @ammo-= ammoReq
-      @ammoText.text = 'Energy: ' + @ammo
-      if @ammo < 25
-        @ammoText.setStyle({font: '14px Army Wide', fill: "#f22"})
-
   toggleBullets: ->
     if @input.keyboard.isDown(Phaser.Keyboard.ONE) and not (@selectedBullet is 'small')
       @selectedBullet = 'small'
@@ -540,6 +523,22 @@ class Game
 
     turretAngle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
     @turrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
+
+  fire: ->
+    bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
+    ammoReq = @AMMO_REQ[@selectedBullet]
+    if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0)
+      @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet]
+      @fireSFX.play()
+      bullet = bullets.getFirstExists(false)
+      angle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
+      offset = @BULLET_OFFSET[@selectedBullet]
+      bullet.reset(400 + Math.cos(angle) * offset, 525 + Math.sin(angle) * offset)
+      @physics.arcade.moveToObject(bullet, @crosshair, 200)
+      @ammo-= ammoReq
+      @ammoText.text = 'Energy: ' + @ammo
+      if @ammo < 25
+        @ammoText.setStyle({font: '14px Army Wide', fill: "#f22"})
 
   checkCollision: ->
     for i in [0...@ENEMY_TYPES.length]
