@@ -79,6 +79,7 @@ class Preloader
 
     @load.audio('fire', ['<%= audio_path("fire.wav") %>'])
     @load.audio('burst', ['<%= audio_path("burst.wav") %>'])
+    @load.audio('bomb', ['<%= audio_path("bomb.wav") %>'])
     @load.audio('explosion', ['<%= audio_path("explosion.wav") %>'])
     @load.audio('explosion2', ['<%= audio_path("explosion2.wav") %>'])
     @load.audio('damage', ['<%= audio_path("damage.wav") %>'])
@@ -113,6 +114,7 @@ class MainMenu
       when "Play Game"
         state.setupOptions()
       when "Start Game"
+        @game.lengthMultplier = 5
         @game.state.start('Game')
 
   setupTopLevel: ->
@@ -434,6 +436,7 @@ class Game
   setupAudio: ->
     @fireSFX = @add.audio('fire')
     @burstSFX = @add.audio('burst')
+    @bombSFX = @add.audio('bomb')
     @explosionSFX = @add.audio('explosion')
     @explosion2SFX = @add.audio('explosion2')
     @damageSFX = @add.audio('damage')
@@ -618,13 +621,18 @@ class Game
           t = @game.state.getCurrentState()
           bullets = t.bullets[t.BULLET_TYPES.indexOf(@shot)]
           angle = Math.random() * 2 * Math.PI
-          for i in [0..9]
+          for i in [0..4]
             b = bullets.getFirstExists(false)
             b.reset(@x, @y)
-            b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 10)) * 200
-            b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 10)) * 200
+            b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5)) * 200
+            b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5)) * 200
+          for i in [0..4]
+            b = bullets.getFirstExists(false)
+            b.reset(@x, @y)
+            b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5 + Math.PI / 5)) * 200
+            b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5 + Math.PI / 5)) * 200
           @kill()
-          t.burstSFX.play()
+          t.bombSFX.play()
         , bomb)
         rotate.start()
 
@@ -788,8 +796,8 @@ class Game
       @damageSFX.play()
 
   checkEnemyLevelUp: ->
-    if @kills >= @nextEnemyLvlUp
-      @levelUpEnemy(@nextEnemyLvlUp)
+    if @nextEnemyLvlUp? and @kills >= @nextEnemyLvlUp
+      @levelUpEnemy(@nextEnemyLvlUp * @game.lengthMultplier)
 
   levelUpEnemy: (kills) ->
     return unless @ENEMY_LVL_CHART[kills]?
@@ -806,6 +814,7 @@ class Game
 
     @nextEnemyLvlUp = @ENEMY_LVL_CHART[kills].next
     if @nextEnemyLvlUp?
+      @nextEnemyLvlUp /= @game.lengthMultplier
       @nextWaveText.text =  "Next Level: #{@nextEnemyLvlUp} kills"
     else
       @nextWaveText.text =  "Max Level Reached"
@@ -819,7 +828,7 @@ class Game
     @setLvlUpExpire()
 
   setMaxCount: (enemyIdx, maxCount) ->
-    current = @enemies[enemyIdx].iterate('exists', true, Phaser.Group.RETURN_TOTAL) + @enemies[enemyIdx].iterate('exists', false, Phaser.Group.RETURN_TOTAL)
+    current = @enemies[enemyIdx].children.length
     if current < maxCount
       @enemies[enemyIdx].createMultiple(maxCount - current, 'enemy' + enemyIdx, 0, false)
     @setSpriteInfo(enemyIdx)
