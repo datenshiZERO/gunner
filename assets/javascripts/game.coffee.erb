@@ -1,3 +1,5 @@
+store = new Persist.Store('Gunner Scores')
+
 class Boot
   constructor: (game) ->
   preload: ->
@@ -77,6 +79,8 @@ class Preloader
     @load.image('deck', '<%= image_path('deck.png') %>')
     @load.spritesheet('sound', '<%= image_path('sound.png') %>', 24, 24)
 
+    @load.image('end-overlay', '<%= image_path('end-overlay.png') %>')
+
     @load.audio('fire', ['<%= audio_path("fire.wav") %>'])
     @load.audio('burst', ['<%= audio_path("burst.wav") %>'])
     @load.audio('bomb', ['<%= audio_path("bomb.wav") %>'])
@@ -113,8 +117,23 @@ class MainMenu
     switch @text
       when "Play Game"
         state.setupOptions()
-      when "Start Game"
+      when "Quick"
         @game.lengthMultplier = 5
+        state.menuTexts["Quick"].fill = "#fff"
+        state.menuTexts["Normal"].fill = "#888"
+        state.menuTexts["Extended"].fill = "#888"
+      when "Normal"
+        @game.lengthMultplier = 2
+        state.menuTexts["Quick"].fill = "#888"
+        state.menuTexts["Normal"].fill = "#fff"
+        state.menuTexts["Extended"].fill = "#888"
+      when "Extended"
+        @game.lengthMultplier = 1
+        state.menuTexts["Quick"].fill = "#888"
+        state.menuTexts["Normal"].fill = "#888"
+        state.menuTexts["Extended"].fill = "#fff"
+      when "Start Game"
+        @game.lengthMultplier = 2 unless @game.lengthMultplier?
         @game.state.start('Game')
 
   setupTopLevel: ->
@@ -154,7 +173,7 @@ class Game
     @enemyRate = [0, 0, 0, 0, 0, 0, 0]
     @nextEnemy = [0, 0, 0, 0, 0, 0, 0]
     @enemyLvlUpExpire = 0
-    @ammo = 100
+    @ammo = 1
     @kills = 0
     @selectedBullet = 'small'
     @selectedFire = 'single'
@@ -259,6 +278,7 @@ class Game
     10000:
       action: ["unlock", @ELT_FIGHTER, 30000, 1]
       next: null
+      end: 15000
 
   BULLET_TYPES: ['small', 'large', 'burst']
   FIRING_TYPES: ['single', 'triple', 'bomb']
@@ -362,16 +382,15 @@ class Game
     @checkCollision()
     @spawnEnemies()
 
-
-    if @ammo <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length == 0
-      @add.text(400, 250, "GAME OVER", { font: '72px Army Wide', fill: '#fff' }).anchor.setTo(0.5, 0.5)
+    if @ammo <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length == 0 and (@bombs.countLiving() == 0)
+      @displayEnd(false)
 
   render: ->
-    @timeText.text = @timeDisplay()
+    unless @endOverlay? and @endOverlay.exists
+      @timeText.text = @timeDisplay(@gameTimer.ms)
     return
 
-  timeDisplay: ->
-    ms = @gameTimer.ms
+  timeDisplay:(ms) ->
     minutes = Math.floor(ms / 60000)
     seconds = ms - (minutes * 60000)
     ms = seconds % 1000
@@ -817,7 +836,11 @@ class Game
       @nextEnemyLvlUp /= @game.lengthMultplier
       @nextWaveText.text =  "Next Level: #{@nextEnemyLvlUp} kills"
     else
-      @nextWaveText.text =  "Max Level Reached"
+      @endScore = @ENEMY_LVL_CHART[kills].end / @game.lengthMultplier
+      @nextWaveText.text = "Destroy an elite fighter"
+      @endText = @add.text 10, 30, "or reach #{@endScore} kills to win", { font: '14px Army Wide', fill: '#fff' }
+      @endText.anchor.setTo(0, 0.5)
+      @killText.y = 50
 
   unlockEnemy: (enemyIdx, spawnRate, maxCount) ->
     @enemyRate[enemyIdx] = spawnRate
@@ -867,6 +890,57 @@ class Game
 
     @enemies[enemyIdx].setAll('anchor.x', 0.5)
     @enemies[enemyIdx].setAll('anchor.y', 0.5)
+
+  displayEnd: (win) ->
+
+    return if @endOverlay? and @endOverlay.exists
+
+    @gameTimer.pause()
+    @endOverlay = @add.tileSprite(100, 70, 600, 400, 'end-overlay')
+    @add.text(400, 150, (if win then "YOU WIN" else "GAME OVER"),
+      { font: '72px Army Wide', fill: '#fff' }
+    ).anchor.setTo(0.5, 0.5)
+    #@add.text(400, 225, "New Best Time!",
+    #  { font: '28px Army Wide', fill: '#fff' }
+    #).anchor.setTo(0.5, 0.5)
+    @add.text(400, 225, "You beat the game in",
+      { font: '22px Army Wide', fill: '#fff' }
+    ).anchor.setTo(0.5, 0.5)
+    @add.text(400, 260, @timeDisplay(@gameTimer.ms),
+      { font: '32px Army Wide', fill: '#fff' }
+    ).anchor.setTo(0.5, 0.5)
+    @timeText.text = ""
+
+    @add.text(400, 290, "(previous record: #{@timeDisplay(@gameTimer.ms)})",
+      { font: '18px sans-serif', fill: '#fff' }
+    ).anchor.setTo(0.5, 0.5)
+
+    @add.text(530, 350, "Play Again",
+      { font: '28px Army Wide', fill: '#fff' }
+    ).anchor.setTo(0.5, 0.5)
+
+    @add.text(270, 350, "Main Menu",
+      { font: '28px Army Wide', fill: '#fff' }
+    ).anchor.setTo(0.5, 0.5)
+
+    if win
+      bestTime = store.get("bestTime-#{@game.lengthMultplier}")
+      if !bestTime? or parseInt(bestTime) > @gameTimer.ms
+        @add.text(400, 225, "New Best Time!",
+          { font: '32px Army Wide', fill: '#fff' }
+        ).anchor.setTo(0.5, 0.5)
+        @add.text(400, 260, @timeDisplay(@gameTimer.ms),
+          { font: '32px Army Wide', fill: '#fff' }
+        ).anchor.setTo(0.5, 0.5)
+        store.set("bestTime-#{@game.lengthMultplier}", @gameTimer.ms)
+
+        
+
+
+
+  quitGame: ->
+    
+    @game.state.start('MainMenu')
 
 
 game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-container')
