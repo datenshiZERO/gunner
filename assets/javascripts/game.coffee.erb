@@ -304,7 +304,7 @@ class Game
   BULLET_OFFSET:
     small: 20
     large: 30
-    burst: 35
+    burst: 25
 
   FIRE_RATE:
     small: 100
@@ -357,7 +357,9 @@ class Game
     return
 
   create: ->
-    @land = @add.tileSprite(0, 0, 800, 600, 'sea')
+    @land = @add.tileSprite(0, 0, 800, 530, 'sea')
+    @land.autoScroll 0, 30
+    @stage.backgroundColor = '#333'
 
     @gameTimer = @time.create(false)
     @gameTimer.start()
@@ -382,11 +384,10 @@ class Game
     return
 
   update: ->
-    @land.tilePosition.y += 0.5
     @checkEnemyLevelUp()
 
     @toggleBullets()
-    @fire() if @input.activePointer.isDown or @input.keyboard.isDown(Phaser.Keyboard.Z)
+    @fire() if (@input.activePointer.isDown and @input.activePointer.worldY < 520) or @input.keyboard.isDown(Phaser.Keyboard.Z)
 
     @checkCollision()
     @spawnEnemies()
@@ -595,10 +596,10 @@ class Game
     @timeText = @add.text(400, 15, '', { font: '20px Army Wide', fill: '#fff' })
     @timeText.anchor.setTo(0.5, 0.5)
 
-    @ammoText = @add.text(400, 556, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff',  })
+    @ammoText = @add.text(400, 555, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff',  })
     @ammoText.anchor.setTo(0.5, 0.5)
 
-    @killText = @add.text(400, 581, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
+    @killText = @add.text(400, 580, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
     @killText.anchor.setTo(0.5, 0.5)
 
     @enemyLvlUpText = @add.text(400, 250, "", { font: '20px Army Wide', fill: '#fff' })
@@ -655,10 +656,9 @@ class Game
 
     @crosshair.body.velocity.x = 0
     @crosshair.body.velocity.y = 0
-    if @input.activePointer.withinGame
+    if @input.activePointer.withinGame and @input.activePointer.worldY < 520
       @crosshair.x = @input.activePointer.worldX
       @crosshair.y = @input.activePointer.worldY
-      @crosshair.y = 520 if @crosshair.y > 520
     else
       if @cursors.left.isDown
         @crosshair.body.velocity.x = -@crosshair.speed
@@ -670,7 +670,7 @@ class Game
       else if @cursors.down.isDown
         @crosshair.body.velocity.y = @crosshair.speed
 
-    if @input.activePointer.withinGame or (key for key, status of @cursors when status.isDown).length > 0
+    if (@input.activePointer.withinGame and @input.activePointer.worldY < 520) or (key for key, status of @cursors when status.isDown).length > 0
       turretAngle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
       @turrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
 
