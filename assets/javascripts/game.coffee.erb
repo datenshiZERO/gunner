@@ -101,7 +101,7 @@ class Preloader
 class MainMenu
   create: ->
     @stage.backgroundColor = '#2d2d2d'
-    @titleText = @add.text(400, 150, "Gunner", { font: '90px "Army Wide", monospace', fill: '#fff' })
+    @titleText = @add.text(400, 150, "Gunner", { font: '128px "Army Wide", monospace', fill: '#fff' })
     @titleText.anchor.setTo(0.5, 0.5)
 
     @menuTexts = {}
@@ -111,7 +111,7 @@ class MainMenu
   addText: (text, x, y, selected, small) ->
     @menuTexts[text] = @add.text(x, y, text,
       {
-        font: "#{ if small then 16 else 22 }px 'Army Wide', monospace",
+        font: "#{ if small then 26 else 32 }px 'Army Wide', monospace",
         fill: (if selected then '#fff' else '#888')
       })
     @menuTexts[text].anchor.setTo(0.5, 0.5)
@@ -145,22 +145,22 @@ class MainMenu
 
   setupTopLevel: ->
     @addText 'Play Game', 400, 350, true
-    @addText 'How To Play', 400, 380, false
-    @addText 'High Scores', 400, 410, false
-    @addText 'Credits', 400, 440, false
+    @addText 'How To Play', 400, 390, false
+    @addText 'High Scores', 400, 430, false
+    @addText 'Credits', 400, 470, false
     @game.menuIndex = 0
 
   setupOptions: ->
     text.destroy() for key, text of @menuTexts
 
-    @addText 'Game Type', 250, 300, true
-    @addText 'Time Attack', 250, 350, true, true
-    @addText 'Survival', 250, 370, false, true
-    @addText 'Game Length', 550, 300, true
-    @addText 'Quick', 550, 340, false, true
-    @addText 'Normal', 550, 360, true, true
-    @addText 'Extended', 550, 380, false, true
-    @addText 'Start Game', 400, 450, true
+    @addText 'Game Type', 230, 300, true
+    @addText 'Time Attack', 230, 350, true, true
+    @addText 'Survival', 230, 380, false, true
+    @addText 'Game Length', 570, 300, true
+    @addText 'Quick', 570, 340, false, true
+    @addText 'Normal', 570, 370, true, true
+    @addText 'Extended', 570, 400, false, true
+    @addText 'Start Game', 400, 470, true
 
 class Game
   @RKE_FIGHTER = 0
@@ -593,7 +593,7 @@ class Game
     @killFill.scale.setTo((256 * (@kills - @previousLvlUp) / (divisor - @previousLvlUp)), 1)
 
   setupText: ->
-    @timeText = @add.text(400, 15, '', { font: '20px Army Wide', fill: '#fff' })
+    @timeText = @add.text(400, 30, '', { font: '28px sans-serif', fill: '#fff' })
     @timeText.anchor.setTo(0.5, 0.5)
 
     @ammoText = @add.text(400, 555, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff',  })
