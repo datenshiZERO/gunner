@@ -6,7 +6,7 @@ class Boot
     @load.image('preloaderBar', '<%= image_path('preloader_bar.png') %>')
   create: ->
     @input.maxPointers = 1
-    @stage.disableVisibilityChange = true
+    @stage.disableVisibilityChange = false
     if @game.device.desktop
       @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
       @scale.minWidth = 480
@@ -172,13 +172,8 @@ class Game
   @ELT_FIGHTER = 6
 
   constructor: (game) ->
-    @nextFire =
-      small: 0
-      large: 0
-      burst: 0
-
-    @enemyRate = [0, 0, 0, 0, 0, 0, 0]
-    @nextEnemy = [0, 0, 0, 0, 0, 0, 0]
+    @canFire = true
+    @enemySpawners = {}
     @enemyLvlUpExpire = 0
     @ammo = 100
     @kills = 0
@@ -353,7 +348,7 @@ class Game
   # FUNCTIONS
   # 
   preload: ->
-    @stage.disableVisibilityChange = true
+    @stage.disableVisibilityChange = false
     return
 
   create: ->
@@ -390,7 +385,6 @@ class Game
     @fire() if (@input.activePointer.isDown and @input.activePointer.worldY < 520) or @input.keyboard.isDown(Phaser.Keyboard.Z)
 
     @checkCollision()
-    @spawnEnemies()
 
     if @ammo <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length == 0 and (@bombs.countLiving() == 0)
       @displayEnd(false)
@@ -472,19 +466,19 @@ class Game
 
   setupDeck: ->
     @deck = @add.sprite(0, 520, 'deck')
-    @energyContainer = @add.sprite(400, 555, 'energy-container')
+    @energyContainer = @add.sprite(400, 550, 'energy-container')
     @energyContainer.anchor.setTo 0.5, 0.5
 
-    @energyRed = @add.sprite(302, 555, 'energy-red')
+    @energyRed = @add.sprite(302, 550, 'energy-red')
     @energyRed.anchor.setTo 0, 0.5
     @energyRed.kill()
-    @energyYellow = @add.sprite(302, 555, 'energy-yellow')
+    @energyYellow = @add.sprite(302, 550, 'energy-yellow')
     @energyYellow.anchor.setTo 0, 0.5
     @energyYellow.kill()
-    @energyGreen = @add.sprite(302, 555, 'energy-green')
+    @energyGreen = @add.sprite(302, 550, 'energy-green')
     @energyGreen.anchor.setTo 0, 0.5
     @energyGreen.kill()
-    @energyBlue = @add.sprite(302, 555, 'energy-blue')
+    @energyBlue = @add.sprite(302, 550, 'energy-blue')
     @energyBlue.anchor.setTo 0, 0.5
     @energyBlue.kill()
 
@@ -544,7 +538,7 @@ class Game
       @rightTurrets[i] = @add.sprite(500, 525, 'turret-' + i)
       @rightTurrets[i].anchor.setTo(0.3, 0.5)
 
-    @soundIcon = @add.sprite(280, 555, 'sound')
+    @soundIcon = @add.sprite(280, 550, 'sound')
     @soundIcon.anchor.setTo(0.5, 0.5)
     @soundIcon.animations.add('on', [ 0 ])
     @soundIcon.animations.add('off', [ 1 ])
@@ -588,15 +582,19 @@ class Game
     @energyBlue.scale.setTo(196, 1)
   
   adjustKillBar: ->
-    divisor = if @nextEnemyLvlUp? then @nextEnemyLvlUp else @endScore
-    @killText.text = "Kills: #{@kills} / #{divisor}"
-    @killFill.scale.setTo((256 * (@kills - @previousLvlUp) / (divisor - @previousLvlUp)), 1)
+    if @nextEnemyLvlUp is null and @kills >= @endScore
+      @killText.text = "Max Kills Reached"
+      @killFill.scale.setTo(256, 1)
+    else
+      divisor = if @nextEnemyLvlUp? then @nextEnemyLvlUp else @endScore
+      @killText.text = "Kills: #{@kills} / #{divisor}"
+      @killFill.scale.setTo((256 * (@kills - @previousLvlUp) / (divisor - @previousLvlUp)), 1)
 
   setupText: ->
     @timeText = @add.text(400, 30, '', { font: '28px sans-serif', fill: '#fff' })
     @timeText.anchor.setTo(0.5, 0.5)
 
-    @ammoText = @add.text(400, 555, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff',  })
+    @ammoText = @add.text(400, 550, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff',  })
     @ammoText.anchor.setTo(0.5, 0.5)
 
     @killText = @add.text(400, 580, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
@@ -688,8 +686,13 @@ class Game
       
     bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
     ammoReq = @AMMO_REQ[@selectedBullet] * @AMMO_REQ[@selectedFire]
-    if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > @AMMO_REQ[@selectedBullet])
-      @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet] * @FIRE_RATE[@selectedFire]
+    if (@ammo >= ammoReq and @canFire and bullets.countDead() > @AMMO_REQ[@selectedBullet])
+      @canFire = false
+      @time.events.add(
+        @FIRE_RATE[@selectedBullet] * @FIRE_RATE[@selectedFire], ->
+          @canFire = true
+        , this
+      )
       @fireSFX.play()
 
       if @selectedFire is 'single' or @selectedFire is 'triple'
@@ -705,18 +708,20 @@ class Game
         bomb.shot = @selectedBullet
         bomb.scale.setTo(3, 3)
         @add.tween(bomb.scale).to({ x: 0.5, y: 0.5 }, 2000, Phaser.Easing.Linear.None, true)
-        rotate = @add.tween(bomb).to({ angle: 360 }, 2000)
+        rotate = @add.tween(bomb).to({ angle: 720 }, 2000)
         rotate.onComplete.add( ->
           t = @game.state.getCurrentState()
           bullets = t.bullets[t.BULLET_TYPES.indexOf(@shot)]
           angle = Math.random() * 2 * Math.PI
           for i in [0..4]
             b = bullets.getFirstExists(false)
+            break unless b?
             b.reset(@x, @y)
             b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5)) * 200
             b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5)) * 200
           for i in [0..4]
             b = bullets.getFirstExists(false)
+            break unless b?
             b.reset(@x, @y)
             b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5 + Math.PI / 5)) * 200
             b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5 + Math.PI / 5)) * 200
@@ -732,6 +737,7 @@ class Game
 
   turretFire: (turret, bullets) ->
     bullet = bullets.getFirstExists(false)
+    return unless bullet?
     angle = @physics.arcade.angleBetween(turret, @crosshair)
     offset = @BULLET_OFFSET[@selectedBullet]
     bullet.reset(turret.x + Math.cos(angle) * offset, turret.y + Math.sin(angle) * offset)
@@ -745,94 +751,116 @@ class Game
         enemy.kill() if enemy.y > 530 or enemy.x < -50 or enemy.x > 850
       , this)
 
-  spawnEnemies: ->
-    #console.log "#{game.time.now} #{nextEnemy0} #{enemies.countDead()}"
-    if @time.now > @nextEnemy[0] and @enemies[0].countDead() > 0
-      @nextEnemy[0] = @time.now + @enemyRate[0]
-      enemy = @enemies[0].getFirstExists(false)
-      enemy.reset(20 + Math.random() * 760, 0)
-      enemy.body.velocity.y = 30 + Math.random() * 30
-      enemy.play('fly')
+  spawnEnemy: (enemyIdx) ->
+    return if @enemies[enemyIdx].countDead() is 0
+    switch enemyIdx
+      when 0
+        @spawnRookies()
+      when 1
+        @spawnRegulars()
+      when 2
+        @spawnSubs()
+      when 3
+        @spawnVets()
+      when 4
+        @spawnBombers()
+      when 5
+        @spawnDestroyers()
+      when 6
+        @spawnElites()
 
-    if @time.now > @nextEnemy[1] and @enemies[1].countDead() > 0
-      @nextEnemy[1] = @time.now + @enemyRate[1]
-      enemy = @enemies[1].getFirstExists(false)
-      if Math.random() < 0.5
-        enemy.reset(0, 20 + Math.random() * 420)
-        enemy.body.velocity.x = 40 + Math.random() * 40
-        enemy.rotation = -Math.PI / 2
-      else
-        enemy.reset(800, 20 + Math.random() * 420)
-        enemy.body.velocity.x = -(40 + Math.random() * 40)
-        enemy.rotation = Math.PI / 2
-      enemy.play('fly')
+  spawnRookies: ->
+    enemy = @enemies[0].getFirstExists(false)
+    enemy.reset(20 + Math.random() * 760, 0)
+    enemy.body.velocity.y = 30 + Math.random() * 30
+    enemy.play('fly')
 
-    if @time.now > @nextEnemy[2] and @enemies[2].countDead() > 0
+  spawnRegulars: ->
+    enemy = @enemies[1].getFirstExists(false)
+    if Math.random() < 0.5
+      enemy.reset(0, 20 + Math.random() * 420)
+      enemy.body.velocity.x = 40 + Math.random() * 40
+      enemy.rotation = -Math.PI / 2
+    else
+      enemy.reset(800, 20 + Math.random() * 420)
+      enemy.body.velocity.x = -(40 + Math.random() * 40)
+      enemy.rotation = Math.PI / 2
+    enemy.play('fly')
+
+  spawnSubs: ->
+    # try to fit the sub within subs/destroyer lanes 5 times before giving up
+    tries = 0
+    while tries < 5
       y = 20 + Math.random() * 480
       unless (sub for sub in @enemies[2].children when sub.alive and sub.y <= y + 32 and sub.y + 32 >= y).length > 0 or
           (dest for dest in @enemies[5].children when dest.alive and dest.y <= y + 32 and dest.y + 32 >= y).length > 0
-        @nextEnemy[2] = @time.now + @enemyRate[2]
-        enemy = @enemies[2].getFirstExists(false)
-        if Math.random() < 0.5
-          enemy.reset(Math.random() * 200, y)
-          enemy.rotation = -Math.PI / 2
-          enemy.body.velocity.x = 20 + Math.random() * 20
-        else
-          enemy.reset(800 - Math.random() * 200, y)
-          enemy.rotation = Math.PI / 2
-          enemy.body.velocity.x = -(20 + Math.random() * 20)
-        enemy.body.setSize(98, 32, 0, 0)
-        enemy.play('rise')
+        break
+      tries++
+    return if tries is 5
+    enemy = @enemies[2].getFirstExists(false)
+    if Math.random() < 0.5
+      enemy.reset(Math.random() * 200, y)
+      enemy.rotation = -Math.PI / 2
+      enemy.body.velocity.x = 20 + Math.random() * 20
+    else
+      enemy.reset(800 - Math.random() * 200, y)
+      enemy.rotation = Math.PI / 2
+      enemy.body.velocity.x = -(20 + Math.random() * 20)
+    enemy.body.setSize(98, 32, 0, 0)
+    enemy.play('rise')
 
-    if @time.now > @nextEnemy[3] and @enemies[3].countDead() > 0
-      @nextEnemy[3] = @time.now + @enemyRate[3]
-      enemy = @enemies[3].getFirstExists(false)
-      start = @rnd.integerInRange(20, 500)
-      end = @rnd.integerInRange(20, 500)
-      enemy.body.velocity.x = 60 + Math.random() * 60
-      if Math.random() < 0.5
-        enemy.reset(0, start)
-        enemy.rotation = @physics.arcade.moveToXY(
-          enemy, 800, end, @rnd.integerInRange(60, 120)
-        ) - Math.PI / 2
-      else
-        enemy.reset(800, start)
-        enemy.rotation = @physics.arcade.moveToXY(
-          enemy, 0, end, @rnd.integerInRange(60, 120)
-        ) - Math.PI / 2
-      enemy.play('fly')
+  spawnVets: ->
+    enemy = @enemies[3].getFirstExists(false)
+    start = @rnd.integerInRange(20, 500)
+    end = @rnd.integerInRange(20, 500)
+    enemy.body.velocity.x = 60 + Math.random() * 60
+    if Math.random() < 0.5
+      enemy.reset(0, start)
+      enemy.rotation = @physics.arcade.moveToXY(
+        enemy, 800, end, @rnd.integerInRange(60, 120)
+      ) - Math.PI / 2
+    else
+      enemy.reset(800, start)
+      enemy.rotation = @physics.arcade.moveToXY(
+        enemy, 0, end, @rnd.integerInRange(60, 120)
+      ) - Math.PI / 2
+    enemy.play('fly')
 
-    if @time.now > @nextEnemy[4] and @enemies[4].countDead() > 0
-      @nextEnemy[4] = @time.now + @enemyRate[4]
-      enemy = @enemies[4].getFirstExists(false)
-      enemy.reset(40 + Math.random() * 740, 0)
-      enemy.body.velocity.y = 30 + Math.random() * 20
-      enemy.play('fly')
+  spawnBombers: ->
+    enemy = @enemies[4].getFirstExists(false)
+    enemy.reset(40 + Math.random() * 740, 0)
+    enemy.body.velocity.y = 30 + Math.random() * 20
+    enemy.play('fly')
 
-    if @time.now > @nextEnemy[5] and @enemies[5].countDead() > 0
+  spawnDestroyers: ->
+    # try to fit within subs/destroyer lanes 5 times before giving up
+    tries = 0
+    while tries < 5
       y = 20 + Math.random() * 480
       unless (sub for sub in @enemies[2].children when sub.alive and sub.y <= y + 32 and sub.y + 32 >= y).length > 0 or
           (dest for dest in @enemies[5].children when dest.alive and dest.y <= y + 32 and dest.y + 32 >= y).length > 0
-        @nextEnemy[5] = @time.now + @enemyRate[5]
-        enemy = @enemies[5].getFirstExists(false)
-        if Math.random() < 0.5
-          enemy.reset(-45, y)
-          enemy.rotation = -Math.PI / 2
-          enemy.body.velocity.x = 10 + Math.random() * 10
-        else
-          enemy.reset(845, y)
-          enemy.rotation = Math.PI / 2
-          enemy.body.velocity.x = -(10 + Math.random() * 10)
+        break
+      tries++
+    return if tries is 5
 
-        enemy.body.setSize(174, 32, 0, 0)
-        enemy.play('cruise')
+    enemy = @enemies[5].getFirstExists(false)
+    if Math.random() < 0.5
+      enemy.reset(-45, y)
+      enemy.rotation = -Math.PI / 2
+      enemy.body.velocity.x = 10 + Math.random() * 10
+    else
+      enemy.reset(845, y)
+      enemy.rotation = Math.PI / 2
+      enemy.body.velocity.x = -(10 + Math.random() * 10)
 
-    if @time.now > @nextEnemy[6] and @enemies[6].countDead() > 0
-      @nextEnemy[6] = @time.now + @enemyRate[6]
-      enemy = @enemies[6].getFirstExists(false)
-      enemy.reset(10 + Math.random() * 790, 0)
-      enemy.body.velocity.y = 100 + Math.random() * 200
-      enemy.play('fly')
+    enemy.body.setSize(174, 32, 0, 0)
+    enemy.play('cruise')
+
+  spawnElites: ->
+    enemy = @enemies[6].getFirstExists(false)
+    enemy.reset(10 + Math.random() * 790, 0)
+    enemy.body.velocity.y = 100 + Math.random() * 200
+    enemy.play('fly')
 
   collisionHandler: (bullet, enemy) ->
     if bullet.key is 'bullet-burst'
@@ -840,6 +868,7 @@ class Game
       angle = Math.random() * 2 * Math.PI
       for i in [0..4]
         b = bullets.getFirstExists(false)
+        break unless b?
         b.reset(bullet.x, bullet.y)
         b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5)) * 200
         b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5)) * 200
@@ -893,7 +922,8 @@ class Game
       when "unlock"
         @unlockEnemy(action[1], action[2], action[3])
       when "setSpawnRate"
-        @enemyRate[action[1]] = action[2]
+        @time.events.remove @enemySpawners[action[1]]
+        @enemySpawners[action[1]] = @game.time.events.loop(action[2], @spawnEnemy, this, action[1])
         @enemyLvlUpText.text = @ENEMY_TYPES[action[1]] + "s are arriving at a faster rate!"
         @setLvlUpExpire()
       when "setMaxCount"
@@ -910,11 +940,11 @@ class Game
       @endText.anchor.setTo(0.5, 0.5)
 
   unlockEnemy: (enemyIdx, spawnRate, maxCount) ->
-    @enemyRate[enemyIdx] = spawnRate
+    @enemySpawners[enemyIdx] = @game.time.events.loop(spawnRate, @spawnEnemy, this, enemyIdx)
     @enemies[enemyIdx].removeAll(true)
     @enemies[enemyIdx].createMultiple(maxCount, 'enemy' + enemyIdx, 0, false)
     @setSpriteInfo(enemyIdx)
-    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have appeared!"
+    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s incoming!"
     @setLvlUpExpire()
 
   setMaxCount: (enemyIdx, maxCount) ->
