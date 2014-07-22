@@ -412,7 +412,7 @@ class Game
     @canFire = true
     @enemySpawners = {}
     @enemyLvlUpExpire = 0
-    @energy = 1000
+    @energy = 100
     @kills = 0
     @lastSelectedBullet = null
     @lastSelectedFire = null
@@ -1202,7 +1202,6 @@ class Game
     , this)
 
   resumeGame: ->
-    @popupOverlay.destroy()
     @popupBorder.destroy()
     @pausedText.destroy()
     @typeHeaderText.destroy()
