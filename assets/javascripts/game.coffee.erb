@@ -108,6 +108,8 @@ class MainMenu
 
     gl = Store.get('gameLength')
     @game.lengthMultplier = if gl? then parseInt(gl) else 2
+    gt = Store.get('gameType')
+    @game.gameType = if gt? then gt else 'time attack'
 
     @menuTexts = {}
     @setupTopLevel()
@@ -127,23 +129,36 @@ class MainMenu
   menuSelect: ->
     state = @game.state.getCurrentState()
     switch @text
+      when "Back to Main Menu"
+        state.setupTopLevel()
       when "Play Game"
         state.setupOptions()
+      when "Time Attack"
+        @game.gameType = 'time attack'
+        state.highlightType()
+      when "Survival"
+        @game.gameType = 'survival'
+        state.highlightType()
       when "Quick"
         @game.lengthMultplier = 5
-        state.highlightLengths()
+        state.highlightLength()
       when "Normal"
         @game.lengthMultplier = 2
-        state.highlightLengths()
+        state.highlightLength()
       when "Extended"
         @game.lengthMultplier = 1
-        state.highlightLengths()
+        state.highlightLength()
       when "Start Game"
         @game.lengthMultplier = 2 unless @game.lengthMultplier?
         Store.set('gameLength', @game.lengthMultplier)
+        @game.gameType = 'time atttack' unless @game.gameType?
+        Store.set('gameType', @game.gameType)
         @game.state.start('Game')
+      when "High Scores"
+        state.displayHighScores()
 
   setupTopLevel: ->
+    text.destroy() for key, text of @menuTexts
     @addText 'Play Game', 400, 350, true
     @addText 'How To Play', 400, 390, false
     @addText 'High Scores', 400, 430, false
@@ -154,16 +169,27 @@ class MainMenu
     text.destroy() for key, text of @menuTexts
 
     @addText 'Game Type', 230, 300, true
-    @addText 'Time Attack', 230, 350, true, true
+    @addText 'Time Attack', 230, 350, false, true
     @addText 'Survival', 230, 380, false, true
     @addText 'Game Length', 570, 300, true
     @addText 'Quick', 570, 340, false, true
     @addText 'Normal', 570, 370, false, true
     @addText 'Extended', 570, 400, false, true
-    @highlightLengths()
+    @highlightLength()
+    @highlightType()
     @addText 'Start Game', 400, 470, true
+    @addText 'Back to Main Menu', 400, 510, false, true
 
-  highlightLengths: ->
+  highlightType: ->
+    @menuTexts["Time Attack"].fill = "#888"
+    @menuTexts["Survival"].fill = "#888"
+    switch @game.gameType
+      when 'time attack'
+        @menuTexts["Time Attack"].fill = "#fff"
+      when 'survival'
+        @menuTexts["Survival"].fill = "#fff"
+
+  highlightLength: ->
     @menuTexts["Quick"].fill = "#888"
     @menuTexts["Normal"].fill = "#888"
     @menuTexts["Extended"].fill = "#888"
@@ -174,6 +200,56 @@ class MainMenu
         @menuTexts["Normal"].fill = "#fff"
       when 1
         @menuTexts["Extended"].fill = "#fff"
+
+  displayHighScores: ->
+    text.destroy() for key, text of @menuTexts
+    @addText ' Time Attack ', 230, 300, true
+    @addText ' Survival ', 570, 300, true
+    @addText 'Quick: ' +
+      if Store.get("bestTime-5")?
+        @timeDisplay(parseInt(Store.get("bestTime-5")))
+      else
+        'n/a'
+      , 230, 340, true, true
+    @addText 'Normal: ' +
+      if Store.get("bestTime-2")?
+        @timeDisplay(parseInt(Store.get("bestTime-2")))
+      else
+        'n/a'
+      , 230, 370, true, true
+    @addText 'Extended: ' +
+      if Store.get("bestTime-1")?
+        @timeDisplay(parseInt(Store.get("bestTime-5")))
+      else
+        'n/a'
+      , 230, 400, true, true
+
+    @addText ' Quick: ' +
+      if Store.get("survival-5")?
+        Store.get("survival-5") + ' kills '
+      else
+        'n/a '
+      , 570, 340, true, true
+    @addText ' Normal: ' +
+      if Store.get("survival-2")?
+        Store.get("survival-2") + ' kills '
+      else
+        'n/a '
+      , 570, 370, true, true
+    @addText ' Extended: ' +
+      if Store.get("survival-1")?
+        Store.get("survival-1") + ' kills '
+      else
+        'n/a '
+      , 570, 400, true, true
+    @addText 'Back to Main Menu', 400, 510, false, true
+
+  timeDisplay:(ms) ->
+    minutes = Math.floor(ms / 60000)
+    seconds = ms - (minutes * 60000)
+    ms = seconds % 1000
+    seconds = Math.floor(seconds / 1000)
+    "#{minutes}' #{('00' + seconds).slice(-2)}\" #{('000' + ms).slice(-3)}"
 
 class Game
   @RKE_FIGHTER = 0
@@ -374,8 +450,17 @@ class Game
     @land.autoScroll 0, 30
     @stage.backgroundColor = '#333'
 
-    @gameTimer = @time.create(false)
-    @gameTimer.start()
+    if @game.gameType is 'time attack'
+      @gameTimer = @time.create(false)
+      @gameTimer.start()
+    else
+      @drain = 1
+      @drainCounter = @game.time.create(false)
+      @drainCounter.loop(60000, ->
+        @ammo -= @drain * 5 * @game.lengthMultplier
+        @drain++
+      , this)
+      @drainCounter.start()
     @setupEnemies()
     @setupExplosions()
 
@@ -408,8 +493,12 @@ class Game
       @displayEnd(false)
 
   render: ->
-    unless @endOverlay? and @endOverlay.exists
-      @timeText.text = @timeDisplay(@gameTimer.ms)
+    unless @gameEnd
+      if @game.gameType is 'time attack'
+        @timeText.text = @timeDisplay(@gameTimer.ms)
+      else
+        @timeText.text = @timeDisplay(@drainCounter.duration)
+
     return
 
   timeDisplay:(ms) ->
@@ -573,8 +662,15 @@ class Game
     @optionsIcon.anchor.setTo(0.5, 0.5)
 
   setupText: ->
-    @timeText = @add.text(400, 30, '', { font: '28px sans-serif', fill: '#fff' })
+    if @game.gameType is 'time attack'
+      @timeText = @add.text(400, 30, '', { font: '28px sans-serif', fill: '#fff' })
+    else
+      @timeText = @add.text(400, 60, '', { font: '28px sans-serif', fill: '#fff' })
+      @drainText = @add.text(400, 30, "next energy drain (#{-5 * @drain * @game.lengthMultplier}) in:", { font: '14px Army Wide', fill: '#fff',  })
+      @drainText.anchor.setTo(0.5, 0.5)
+
     @timeText.anchor.setTo(0.5, 0.5)
+
 
     @ammoText = @add.text(400, 550, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff',  })
     @ammoText.anchor.setTo(0.5, 0.5)
@@ -588,10 +684,18 @@ class Game
 
   adjustEnergyBar: ->
     @ammoText.text = 'Energy: ' + @ammo
+    if @ammo < 0
+      @energyRed.kill() if @energyRed.alive
+      @energyYellow.kill() if @energyYellow.alive
+      @energyGreen.kill() if @energyGreen.alive
+      @energyBlue.kill() if @energyBlue.alive
+      return
     @energyRed.revive() unless @energyRed.alive
     if @ammo <= 25
       @energyRed.scale.setTo((196 * @ammo / 25), 1)
       @energyYellow.kill() if @energyYellow.alive
+      @energyGreen.kill() if @energyGreen.alive
+      @energyBlue.kill() if @energyBlue.alive
       return
     @energyRed.scale.setTo(196, 1)
 
@@ -599,6 +703,7 @@ class Game
     if @ammo <= 100
       @energyYellow.scale.setTo((196 * (@ammo - 25) / 75), 1)
       @energyGreen.kill() if @energyGreen.alive
+      @energyBlue.kill() if @energyBlue.alive
       return
     @energyYellow.scale.setTo(196, 1)
 
@@ -617,9 +722,12 @@ class Game
   
   adjustKillBar: ->
     if @nextEnemyLvlUp is null and @kills >= @endScore
-      @killText.text = "Max Kills Reached"
       @killFill.scale.setTo(256, 1)
-      @displayEnd(true)
+      if @game.gameType is 'time attack'
+        @killText.text = "Max Kills Reached"
+        @displayEnd(true)
+      else
+        @killText.text = "Max Level Reached (#{@kills})"
     else
       divisor = if @nextEnemyLvlUp? then @nextEnemyLvlUp else @endScore
       @killText.text = "Kills: #{@kills} / #{divisor}"
@@ -944,7 +1052,7 @@ class Game
       @adjustEnergyBar()
       @kills++
       @adjustKillBar()
-      if enemy.key is 'enemy6'
+      if enemy.key is 'enemy6' and @game.gameType is 'time attack'
         @displayEnd(true)
     else
       enemy.play('hit')
@@ -1071,24 +1179,40 @@ class Game
       @quitGame()
     , this)
 
-    if win
-      bestTime = Store.get("bestTime-#{@game.lengthMultplier}")
-      if !bestTime? or parseInt(bestTime) > @gameTimer.ms
-        @add.text(400, 225, "New Best Time!",
-          { font: '32px Army Wide', fill: '#fff' }
-        ).anchor.setTo(0.5, 0.5)
-        @add.text(400, 260, @timeDisplay(@gameTimer.ms),
-          { font: '32px Army Wide', fill: '#fff' }
-        ).anchor.setTo(0.5, 0.5)
-        Store.set("bestTime-#{@game.lengthMultplier}", @gameTimer.ms)
+    if @game.gameType is 'time attack'
+      if win
+        bestTime = Store.get("bestTime-#{@game.lengthMultplier}")
+        if !bestTime? or parseInt(bestTime) > @gameTimer.ms
+          @add.text(400, 225, "New Best Time!",
+            { font: '32px Army Wide', fill: '#fff' }
+          ).anchor.setTo(0.5, 0.5)
+          @add.text(400, 260, @timeDisplay(@gameTimer.ms),
+            { font: '32px Army Wide', fill: '#fff' }
+          ).anchor.setTo(0.5, 0.5)
+          Store.set("bestTime-#{@game.lengthMultplier}", @gameTimer.ms)
+      else
+        bestTime = Store.get("bestTime-#{@game.lengthMultplier}")
+        if bestTime?
+          @add.text(400, 260,
+            "(previous record: #{@timeDisplay(parseInt(bestTime))})",
+            { font: '18px sans-serif', fill: '#fff' }
+          ).anchor.setTo(0.5, 0.5)
     else
-      bestTime = Store.get("bestTime-#{@game.lengthMultplier}")
-      if bestTime?
-        @add.text(400, 290,
-          "(previous record: #{@timeDisplay(parseInt(bestTime))})",
-          { font: '18px sans-serif', fill: '#fff' }
+      highScore = Store.get("survival-#{@game.lengthMultplier}")
+      if !(highScore) or @kills > parseInt(highScore)
+        @add.text(400, 225, "New High Score!",
+          { font: '32px Army Wide', fill: '#fff' }
         ).anchor.setTo(0.5, 0.5)
+        @add.text(400, 260, @kills,
+          { font: '32px Army Wide', fill: '#fff' }
+        ).anchor.setTo(0.5, 0.5)
+        Store.set("survival-#{@game.lengthMultplier}", @kills)
         
+      if highScore?
+          @add.text(400, 290,
+            "(previous record: #{highScore})",
+            { font: '18px sans-serif', fill: '#fff' }
+          ).anchor.setTo(0.5, 0.5)
 
   restartGame: ->
     @destroyResources()
@@ -1101,7 +1225,8 @@ class Game
 
   destroyResources: ->
     @land.destroy()
-    @gameTimer.destroy()
+    if @game.gameType is 'time attack'
+      @gameTimer.destroy()
     @crosshair.destroy()
     enemy.destroy() for enemy in @enemies
     @explosions.destroy()
