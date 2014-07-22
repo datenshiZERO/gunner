@@ -55,22 +55,21 @@
           js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
           fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'facebook-jssdk'));
-      %script{:type => "text/javascript", :src => "//cdnjs.cloudflare.com/ajax/libs/stats.js/r11/Stats.min.js"}
     - else
       %script{:type => "text/javascript", :src => javascript_path("stats.min")}
-    :javascript
-      var stats = new Stats();
+      :javascript
+        var stats = new Stats();
 
-      stats.setMode(0);
+        stats.setMode(0);
 
-      stats.domElement.style.position = 'absolute';
-      stats.domElement.style.left = '0px';
-      stats.domElement.style.top = '0px';
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.left = '0px';
+        stats.domElement.style.top = '0px';
 
-      document.body.appendChild(stats.domElement);
+        document.body.appendChild(stats.domElement);
 
-      setInterval(function () {
-        stats.begin();
-        stats.end();
-      }, 1000 / 60);
+        setInterval(function () {
+          stats.begin();
+          stats.end();
+        }, 1000 / 60);
 

@@ -6945,10 +6945,14 @@ PIXI.WebGLSpriteBatch.prototype.renderBatch = function(texture, size, startIndex
     {
         PIXI.updateWebGLTexture(this.currentBaseTexture, gl);
     }
-
+    try {
     // now draw those suckas!
     gl.drawElements(gl.TRIANGLES, size * 6, gl.UNSIGNED_SHORT, startIndex * 6 * 2);
-    
+    } catch (e) {
+      console.log(texture)
+      console.log(size)
+      console.log(startIndex)
+    }
     // increment the draw count
     this.renderSession.drawCount++;
 };

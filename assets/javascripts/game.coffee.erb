@@ -55,40 +55,8 @@ class Preloader
 
     @load.setPreloadSprite(@preloaderBar)
 
+    @load.atlas('assets', '<%= image_path('atlas.png') %>', '<%= image_path('atlas.json') %>')
     @load.image('sea', '<%= image_path('sea.png') %>')
-    @load.image('crosshair', '<%= image_path('crosshair.png') %>')
-    @load.image('bomb', '<%= image_path('bomb.png') %>')
-    <% %w{small large burst}.each do |x| %>
-    @load.image('turret-<%= x %>', '<%= image_path("turret-#{x}.png") %>')
-    @load.image('bullet-<%= x %>', '<%= image_path("bullet-#{x}.png") %>')
-    <% end %>
-    <% %w{small large burst single triple bomb}.each do |x| %>
-    @load.image('bbtn-<%= x %>', '<%= image_path("bbtn-#{x}.png") %>')
-    @load.image('bbtnd-<%= x %>', '<%= image_path("bbtnd-#{x}.png") %>')
-    <% end %>
-    <% [0, 1, 3].each do |x| %>
-    @load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
-    <% end %>
-    @load.spritesheet('enemy2', '<%= image_path("enemy2.png") %>', 32, 98)
-    @load.spritesheet('enemy4', '<%= image_path("enemy4.png") %>', 93, 75)
-    @load.spritesheet('enemy5', '<%= image_path("enemy5.png") %>', 32, 174)
-    @load.spritesheet('enemy6', '<%= image_path("enemy6.png") %>', 32, 32)
-
-    @load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
-    @load.spritesheet('explosion2', '<%= image_path("explosion2.png") %>', 64, 64, 7)
-    @load.image('deck', '<%= image_path('deck.png') %>')
-    @load.image('energy-container', '<%= image_path('energy-container.png') %>')
-    @load.image('energy-red', '<%= image_path('energy-red.png') %>')
-    @load.image('energy-yellow', '<%= image_path('energy-yellow.png') %>')
-    @load.image('energy-green', '<%= image_path('energy-green.png') %>')
-    @load.image('energy-blue', '<%= image_path('energy-blue.png') %>')
-    @load.image('kill-container', '<%= image_path('kill-container.png') %>')
-    @load.image('kill-fill', '<%= image_path('kill-fill.png') %>')
-    @load.spritesheet('sound', '<%= image_path('sound.png') %>', 24, 24)
-    @load.image('options', '<%= image_path('options.png') %>')
-
-    @load.image('popup-border', '<%= image_path('popup-border.png') %>')
-    @load.image('popup-overlay', '<%= image_path('popup-overlay.png') %>')
 
     @load.audio('fire', ['<%= audio_path("fire.wav") %>'])
     @load.audio('burst', ['<%= audio_path("burst.wav") %>'])
@@ -109,7 +77,7 @@ class MainMenu
     gl = Store.get('gameLength')
     @game.lengthMultplier = if gl? then parseInt(gl) else 2
     gt = Store.get('gameType')
-    @game.gameType = if gt? then gt else 'time attack'
+    @game.gameType = if gt? then gt else 'Time Attack'
 
     @menuTexts = {}
     @setupTopLevel()
@@ -134,10 +102,10 @@ class MainMenu
       when "Play Game"
         state.setupOptions()
       when "Time Attack"
-        @game.gameType = 'time attack'
+        @game.gameType = 'Time Attack'
         state.highlightType()
       when "Survival"
-        @game.gameType = 'survival'
+        @game.gameType = 'Survival'
         state.highlightType()
       when "Quick"
         @game.lengthMultplier = 5
@@ -184,9 +152,9 @@ class MainMenu
     @menuTexts["Time Attack"].fill = "#888"
     @menuTexts["Survival"].fill = "#888"
     switch @game.gameType
-      when 'time attack'
+      when 'Time Attack'
         @menuTexts["Time Attack"].fill = "#fff"
-      when 'survival'
+      when 'Survival'
         @menuTexts["Survival"].fill = "#fff"
 
   highlightLength: ->
@@ -369,13 +337,16 @@ class Game
 
   ENEMY_TYPES: ['Rookie Fighter', 'Regular Fighter', 'Submarine', 'Veteran Fighter', 'Bomber', 'Destroyer', 'Elite Fighter']
 
-  AMMO_REQ:
+  ENERGY_REQ:
     small: 1
     large: 3
     burst: 8
     single: 1
     triple: 3
     bomb: 10
+
+  ENERGY_BARS: ['red', 'yellow', 'green', 'blue']
+  ENERGY_TIERS: [25, 100, 500, 2500]
 
   BULLET_OFFSET:
     small: 20
@@ -425,6 +396,11 @@ class Game
     enemy5: 200
     enemy6: 500
 
+  GAME_LENGTH_TEXT:
+    5: 'Quick'
+    2: 'Normal'
+    1: 'Extended'
+
   #
   # FUNCTIONS
   # 
@@ -436,7 +412,7 @@ class Game
     @canFire = true
     @enemySpawners = {}
     @enemyLvlUpExpire = 0
-    @ammo = 100
+    @energy = 1000
     @kills = 0
     @lastSelectedBullet = null
     @lastSelectedFire = null
@@ -450,21 +426,21 @@ class Game
     @land.autoScroll 0, 30
     @stage.backgroundColor = '#333'
 
-    if @game.gameType is 'time attack'
+    if @game.gameType is 'Time Attack'
       @gameTimer = @time.create(false)
       @gameTimer.start()
     else
       @drain = 1
       @drainCounter = @game.time.create(false)
       @drainCounter.loop(60000, ->
-        @ammo -= @drain * 5 * @game.lengthMultplier
+        @energy -= @drain * 5 * @game.lengthMultplier
         @drain++
       , this)
       @drainCounter.start()
     @setupEnemies()
     @setupExplosions()
 
-    @crosshair = @add.sprite(400, 300, 'crosshair')
+    @crosshair = @add.sprite(400, 300, 'assets', 'crosshair')
     @crosshair.anchor.setTo(0.5, 0.5)
     @crosshair.speed = 300
     @physics.enable(@crosshair, Phaser.Physics.ARCADE)
@@ -489,12 +465,12 @@ class Game
 
     @checkCollision()
 
-    if @ammo <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length == 0 and (@bombs.countLiving() == 0)
+    if @energy <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length == 0 and (@bombs.countLiving() == 0)
       @displayEnd(false)
 
   render: ->
     unless @gameEnd
-      if @game.gameType is 'time attack'
+      if @game.gameType is 'Time Attack'
         @timeText.text = @timeDisplay(@gameTimer.ms)
       else
         @timeText.text = @timeDisplay(@drainCounter.duration)
@@ -527,9 +503,9 @@ class Game
     @explosions = @add.group()
     @explosions.enableBody = true
     @explosions.physicsBodyType = Phaser.Physics.ARCADE
-    @explosions.createMultiple(200, 'explosion')
+    @explosions.createMultiple(200, 'assets')
     @explosions.forEach(((explosion) ->
-      explosion.animations.add 'explosion'
+      explosion.animations.add 'explosion', Phaser.Animation.generateFrameNames('explosion-', 0, 5, '', 1)
     ), this)
     @explosions.setAll('anchor.x', 0.5)
     @explosions.setAll('anchor.y', 0.5)
@@ -537,9 +513,9 @@ class Game
     @explosions2 = @add.group()
     @explosions2.enableBody = true
     @explosions2.physicsBodyType = Phaser.Physics.ARCADE
-    @explosions2.createMultiple(10, 'explosion2')
+    @explosions2.createMultiple(10, 'assets')
     @explosions2.forEach(((explosion) ->
-      explosion.animations.add 'explosion'
+      explosion.animations.add 'explosion', Phaser.Animation.generateFrameNames('explosion2-', 0, 6, '', 1)
     ), this)
     @explosions2.setAll('anchor.x', 0.5)
     @explosions2.setAll('anchor.y', 0.5)
@@ -551,7 +527,8 @@ class Game
       bullets.enableBody = true
       bullets.physicsBodyType = Phaser.Physics.ARCADE
       # console.log 'bullet-' + bullet
-      bullets.createMultiple(100, 'bullet-' + bullet, 0, false)
+      bullets.createMultiple(100, 'assets', 'bullet-' + bullet, false)
+      bullets.setAll('name', 'bullet-' + bullet)
       bullets.setAll('anchor.x', 0.5)
       bullets.setAll('anchor.y', 0.5)
       bullets.setAll('outOfBoundsKill', true)
@@ -559,7 +536,7 @@ class Game
       @bullets.push bullets
 
     @bombs = @add.group()
-    @bombs.createMultiple(10, 'bomb')
+    @bombs.createMultiple(10, 'assets', 'bomb')
     @bombs.setAll('anchor.x', 0.5)
     @bombs.setAll('anchor.y', 0.5)
 
@@ -572,26 +549,20 @@ class Game
     @damageSFX = @add.audio('damage')
 
   setupDeck: ->
-    @deck = @add.sprite(0, 520, 'deck')
-    @energyContainer = @add.sprite(400, 550, 'energy-container')
+    @deck = @add.sprite(0, 520, 'assets', 'deck')
+    @energyContainer = @add.sprite(400, 550, 'assets', 'energy-container')
     @energyContainer.anchor.setTo 0.5, 0.5
 
-    @energyRed = @add.sprite(302, 550, 'energy-red')
-    @energyRed.anchor.setTo 0, 0.5
-    @energyRed.kill()
-    @energyYellow = @add.sprite(302, 550, 'energy-yellow')
-    @energyYellow.anchor.setTo 0, 0.5
-    @energyYellow.kill()
-    @energyGreen = @add.sprite(302, 550, 'energy-green')
-    @energyGreen.anchor.setTo 0, 0.5
-    @energyGreen.kill()
-    @energyBlue = @add.sprite(302, 550, 'energy-blue')
-    @energyBlue.anchor.setTo 0, 0.5
-    @energyBlue.kill()
+    @energyFills = []
+    for i in @ENERGY_BARS
+      bar = @add.sprite(302, 550, 'assets', 'energy-' + i)
+      bar.anchor.setTo 0, 0.5
+      bar.kill()
+      @energyFills.push bar
 
-    @killContainer = @add.sprite(400, 580, 'kill-container')
+    @killContainer = @add.sprite(400, 580, 'assets', 'kill-container')
     @killContainer.anchor.setTo 0.5, 0.5
-    @killFill = @add.sprite(272, 580, 'kill-fill')
+    @killFill = @add.sprite(272, 580, 'assets', 'kill-fill')
     @killFill.anchor.setTo 0, 0.5
     @killFill.scale.setTo 0, 1
 
@@ -602,9 +573,9 @@ class Game
     @bbtnd = {}
     # toggle bullet types
     for i in @FIRING_TYPES
-      @bbtnd[i] = @add.sprite(545 + (@FIRING_TYPES.indexOf(i)) * 85, 535, 'bbtnd-' + i)
+      @bbtnd[i] = @add.sprite(545 + (@FIRING_TYPES.indexOf(i)) * 85, 535, 'assets', 'bbtnd-' + i)
       @bbtnd[i].inputEnabled = true
-      @bbtn[i] = @add.sprite(545 + (@FIRING_TYPES.indexOf(i)) * 85, 535, 'bbtn-' + i)
+      @bbtn[i] = @add.sprite(545 + (@FIRING_TYPES.indexOf(i)) * 85, 535,'assets',  'bbtn-' + i)
       @bbtn[i].inputEnabled = true
       @bbtnd[i].kill()
 
@@ -618,9 +589,9 @@ class Game
       )(@bbtn[i], @bbtnd[i], i, this)
 
     for i in @BULLET_TYPES
-      @bbtnd[i] = @add.sprite(5 + (@BULLET_TYPES.indexOf(i)) * 85, 535, 'bbtnd-' + i)
+      @bbtnd[i] = @add.sprite(5 + (@BULLET_TYPES.indexOf(i)) * 85, 535, 'assets', 'bbtnd-' + i)
       @bbtnd[i].inputEnabled = true
-      @bbtn[i] = @add.sprite(5 + (@BULLET_TYPES.indexOf(i)) * 85, 535, 'bbtn-' + i)
+      @bbtn[i] = @add.sprite(5 + (@BULLET_TYPES.indexOf(i)) * 85, 535, 'assets', 'bbtn-' + i)
       @bbtn[i].inputEnabled = true
       @bbtnd[i].kill()
 
@@ -636,17 +607,17 @@ class Game
 
 
     for i in @BULLET_TYPES
-      @turrets[i] = @add.sprite(400, 525, 'turret-' + i)
+      @turrets[i] = @add.sprite(400, 525, 'assets', 'turret-' + i)
       @turrets[i].anchor.setTo(0.3, 0.5)
-      @leftTurrets[i] = @add.sprite(300, 525, 'turret-' + i)
+      @leftTurrets[i] = @add.sprite(300, 525, 'assets', 'turret-' + i)
       @leftTurrets[i].anchor.setTo(0.3, 0.5)
-      @rightTurrets[i] = @add.sprite(500, 525, 'turret-' + i)
+      @rightTurrets[i] = @add.sprite(500, 525, 'assets', 'turret-' + i)
       @rightTurrets[i].anchor.setTo(0.3, 0.5)
 
-    @soundIcon = @add.sprite(280, 550, 'sound')
+    @soundIcon = @add.sprite(280, 550, 'assets', 'sound-0')
     @soundIcon.anchor.setTo(0.5, 0.5)
-    @soundIcon.animations.add('on', [ 0 ])
-    @soundIcon.animations.add('off', [ 1 ])
+    @soundIcon.animations.add('on', ['sound-0'])
+    @soundIcon.animations.add('off', ['sound-1'])
     @soundIcon.play('on')
     @soundIcon.inputEnabled = true
     @soundIcon.events.onInputDown.add( ->
@@ -658,22 +629,27 @@ class Game
         @soundIcon.play('off')
     , this)
 
-    @optionsIcon = @add.sprite(520, 550, 'options')
+    @optionsIcon = @add.sprite(520, 550, 'assets', 'options')
     @optionsIcon.anchor.setTo(0.5, 0.5)
+    @optionsIcon.inputEnabled = true
+    @optionsIcon.events.onInputDown.add( ->
+      unless @game.paused
+        @pauseGame()
+    , this)
 
   setupText: ->
-    if @game.gameType is 'time attack'
+    if @game.gameType is 'Time Attack'
       @timeText = @add.text(400, 30, '', { font: '28px sans-serif', fill: '#fff' })
     else
-      @timeText = @add.text(400, 60, '', { font: '28px sans-serif', fill: '#fff' })
-      @drainText = @add.text(400, 30, "next energy drain (#{-5 * @drain * @game.lengthMultplier}) in:", { font: '14px Army Wide', fill: '#fff',  })
+      @timeText = @add.text(400, 50, '', { font: '28px sans-serif', fill: '#fff' })
+      @drainText = @add.text(400, 20, "next energy drain (#{-5 * @drain * @game.lengthMultplier}) in:", { font: '14px Army Wide', fill: '#fff',  })
       @drainText.anchor.setTo(0.5, 0.5)
 
     @timeText.anchor.setTo(0.5, 0.5)
 
 
-    @ammoText = @add.text(400, 550, 'Energy: ' + @ammo, { font: '14px Army Wide', fill: '#fff',  })
-    @ammoText.anchor.setTo(0.5, 0.5)
+    @energyText = @add.text(400, 550, 'Energy: ' + @energy, { font: '14px Army Wide', fill: '#fff',  })
+    @energyText.anchor.setTo(0.5, 0.5)
     @adjustEnergyBar()
 
     @killText = @add.text(400, 580, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
@@ -683,47 +659,46 @@ class Game
     @enemyLvlUpText.anchor.setTo(0.5, 0.5)
 
   adjustEnergyBar: ->
-    @ammoText.text = 'Energy: ' + @ammo
-    if @ammo < 0
-      @energyRed.kill() if @energyRed.alive
-      @energyYellow.kill() if @energyYellow.alive
-      @energyGreen.kill() if @energyGreen.alive
-      @energyBlue.kill() if @energyBlue.alive
-      return
-    @energyRed.revive() unless @energyRed.alive
-    if @ammo <= 25
-      @energyRed.scale.setTo((196 * @ammo / 25), 1)
-      @energyYellow.kill() if @energyYellow.alive
-      @energyGreen.kill() if @energyGreen.alive
-      @energyBlue.kill() if @energyBlue.alive
-      return
-    @energyRed.scale.setTo(196, 1)
+    @energyText.text = 'Energy: ' + @energy
+    if @energy < 0
+      @energyFills[0].kill() if @energyFills[0].alive
+    if @energy <= @ENERGY_TIERS[0]
+      @energyFills[1].kill() if @energyFills[1].alive
+    if @energy <= @ENERGY_TIERS[1]
+      @energyFills[2].kill() if @energyFills[2].alive
+    if @energy <= @ENERGY_TIERS[2]
+      @energyFills[3].kill() if @energyFills[3].alive
 
-    @energyYellow.revive() unless @energyYellow.alive
-    if @ammo <= 100
-      @energyYellow.scale.setTo((196 * (@ammo - 25) / 75), 1)
-      @energyGreen.kill() if @energyGreen.alive
-      @energyBlue.kill() if @energyBlue.alive
-      return
-    @energyYellow.scale.setTo(196, 1)
+    return if @energy < 0
 
-    @energyGreen.revive() unless @energyGreen.alive
-    if @ammo <= 500
-      @energyGreen.scale.setTo((196 * (@ammo - 100) / 400), 1)
-      @energyBlue.kill() if @energyBlue.alive
+    @energyFills[0].revive() unless @energyFills[0].alive
+    if @energy <= @ENERGY_TIERS[0]
+      @energyFills[0].scale.setTo((196 * @energy / @ENERGY_TIERS[0]), 1)
       return
-    @energyGreen.scale.setTo(196, 1)
+    @energyFills[0].scale.setTo(196, 1)
 
-    @energyBlue.revive() unless @energyBlue.alive
-    if @ammo <= 2500
-      @energyBlue.scale.setTo((196 * (@ammo - 500) / 2000), 1)
+    @energyFills[1].revive() unless @energyFills[1].alive
+    if @energy <= @ENERGY_TIERS[1]
+      @energyFills[1].scale.setTo(196 * (@energy - @ENERGY_TIERS[0]) / (@ENERGY_TIERS[1] - @ENERGY_TIERS[0]), 1)
       return
-    @energyBlue.scale.setTo(196, 1)
+    @energyFills[1].scale.setTo(196, 1)
+
+    @energyFills[2].revive() unless @energyFills[2].alive
+    if @energy <= @ENERGY_TIERS[2]
+      @energyFills[2].scale.setTo(196 * (@energy - @ENERGY_TIERS[1]) / (@ENERGY_TIERS[2] - @ENERGY_TIERS[1]), 1)
+      return
+    @energyFills[2].scale.setTo(196, 1)
+
+    @energyFills[3].revive() unless @energyFills[3].alive
+    if @energy <= @ENERGY_TIERS[3]
+      @energyFills[3].scale.setTo(196 * (@energy - @ENERGY_TIERS[2]) / (@ENERGY_TIERS[3] - @ENERGY_TIERS[2]), 1)
+      return
+    @energyFills[3].scale.setTo(196, 1)
   
   adjustKillBar: ->
     if @nextEnemyLvlUp is null and @kills >= @endScore
       @killFill.scale.setTo(256, 1)
-      if @game.gameType is 'time attack'
+      if @game.gameType is 'Time Attack'
         @killText.text = "Max Kills Reached"
         @displayEnd(true)
       else
@@ -823,9 +798,9 @@ class Game
     return if @input.activePointer.isDown and @input.activePointer.worldY >= 520
       
     bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
-    ammoReq = @AMMO_REQ[@selectedBullet] * @AMMO_REQ[@selectedFire]
-    if (@ammo >= ammoReq and @canFire and
-        bullets.countDead() > @AMMO_REQ[@selectedBullet])
+    energyReq = @ENERGY_REQ[@selectedBullet] * @ENERGY_REQ[@selectedFire]
+    if (@energy >= energyReq and @canFire and
+        bullets.countDead() > @ENERGY_REQ[@selectedBullet])
       @canFire = false
       @time.events.add(
         @FIRE_RATE[@selectedBullet] * @FIRE_RATE[@selectedFire], ->
@@ -872,7 +847,7 @@ class Game
         , bomb)
         rotate.start()
 
-      @ammo-= ammoReq
+      @energy-= energyReq
       @adjustEnergyBar()
 
   turretFire: (turret, bullets) ->
@@ -884,9 +859,7 @@ class Game
     @physics.arcade.moveToObject(bullet, @crosshair, 200)
 
   createPopupOverlay: ->
-
-    @popupOverlay = @add.tileSprite(102, 72, 598, 398, 'popup-overlay')
-    @popupBorder = @add.sprite(400, 270, 'popup-border')
+    @popupBorder = @add.sprite(400, 270, 'assets', 'popup-border')
     @popupBorder.anchor.setTo(0.5, 0.5)
 
   checkCollision: ->
@@ -1009,7 +982,7 @@ class Game
     enemy.play('fly')
 
   collisionHandler: (bullet, enemy) ->
-    if bullet.key is 'bullet-burst'
+    if bullet.name is 'bullet-burst'
       bullets = @bullets[0]
       angle = Math.random() * 2 * Math.PI
       for i in [0..4]
@@ -1021,9 +994,9 @@ class Game
       @burstSFX.play()
 
     bullet.kill()
-    if Math.random() < @HIT_RATE[bullet.key][enemy.key]
-      i = parseInt(enemy.key.slice(5))
-      explosion = switch enemy.key
+    if Math.random() < @HIT_RATE[bullet.name][enemy.name]
+      i = parseInt(enemy.name.slice(5))
+      explosion = switch enemy.name
         when "enemy4", "enemy5", "enemy6"
           @explosion2SFX.play()
           @explosions2.getFirstExists(false)
@@ -1037,7 +1010,7 @@ class Game
       enemy.kill()
       explosion.play('explosion', 15, false, true)
 
-      reward = @add.text(enemy.x, enemy.y, "#{@REWARD[enemy.key]}", { font: '16px Army Wide', fill: '#fff' })
+      reward = @add.text(enemy.x, enemy.y, "#{@REWARD[enemy.name]}", { font: '16px Army Wide', fill: '#fff' })
       reward.anchor.setTo(0.5, 0.5)
       rise = @add.tween(reward)
       rise.to({ y: enemy.y - 16 }, 250)
@@ -1048,11 +1021,11 @@ class Game
         @destroy()
       , reward)
       rise.start()
-      @ammo += @REWARD[enemy.key]
+      @energy += @REWARD[enemy.name]
       @adjustEnergyBar()
       @kills++
       @adjustKillBar()
-      if enemy.key is 'enemy6' and @game.gameType is 'time attack'
+      if enemy.name is 'enemy6' and @game.gameType is 'Time Attack'
         @displayEnd(true)
     else
       enemy.play('hit')
@@ -1089,7 +1062,8 @@ class Game
   unlockEnemy: (enemyIdx, spawnRate, maxCount) ->
     @enemySpawners[enemyIdx] = @game.time.events.loop(spawnRate, @spawnEnemy, this, enemyIdx)
     @enemies[enemyIdx].removeAll(true)
-    @enemies[enemyIdx].createMultiple(maxCount, 'enemy' + enemyIdx, 0, false)
+    @enemies[enemyIdx].createMultiple(maxCount, 'assets', 'enemy' + enemyIdx + '-0', false)
+    @enemies[enemyIdx].setAll('name', 'enemy' + enemyIdx)
     @setSpriteInfo(enemyIdx)
     @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s incoming!"
     @setLvlUpExpire()
@@ -1097,7 +1071,8 @@ class Game
   setMaxCount: (enemyIdx, maxCount) ->
     current = @enemies[enemyIdx].children.length
     if current < maxCount
-      @enemies[enemyIdx].createMultiple(maxCount - current, 'enemy' + enemyIdx, 0, false)
+      @enemies[enemyIdx].createMultiple(maxCount - current, 'assets', 'enemy' + enemyIdx + '-0', false)
+      @enemies[enemyIdx].setAll('name', 'enemy' + enemyIdx)
     @setSpriteInfo(enemyIdx)
     @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have increased in numbers!"
     @setLvlUpExpire()
@@ -1111,22 +1086,49 @@ class Game
     switch enemyIdx
       when 0, 1, 3, 4, 6
         @enemies[enemyIdx].forEach( (enemy) ->
-          enemy.animations.add('hit', [ 3, 2, 3, 2 ], 20, false)
-          enemy.animations.add('fly', [ 0, 1, 2 ], 20, true)
+          enemy.animations.add('hit', [
+            'enemy' + enemyIdx + '-3',
+            'enemy' + enemyIdx + '-2',
+            'enemy' + enemyIdx + '-3',
+            'enemy' + enemyIdx + '-2'
+          ], 20, false)
+          enemy.animations.add('fly',
+            Phaser.Animation.generateFrameNames(
+              'enemy' + enemyIdx + '-', 0, 2, '', 1),
+            20, true)
           enemy.events.onAnimationComplete.add( (enemy) ->
             enemy.play('fly')
           , this)
         , this)
       when 2
         @enemies[enemyIdx].forEach( (enemy) ->
-          enemy.animations.add('rise', [ 1, 2, 3, 4, 5, 0 ], 10, false)
-          enemy.animations.add('hit', [ 6, 0, 6, 0, 6, 0 ], 10, false)
+          enemy.animations.add('rise', [
+              'enemy2-1',
+              'enemy2-2',
+              'enemy2-3',
+              'enemy2-4',
+              'enemy2-5',
+              'enemy2-0'
+            ], 10, false)
+          enemy.animations.add('hit', [
+              'enemy2-6',
+              'enemy2-0',
+              'enemy2-6',
+              'enemy2-0',
+              'enemy2-6',
+              'enemy2-0'
+            ], 10, false)
           enemy.animations.add('cruise', [ 0 ], 20, true)
         , this)
       when 5
         @enemies[enemyIdx].forEach( (enemy) ->
-          enemy.animations.add('hit', [ 2, 0, 2, 1 ], 20, false)
-          enemy.animations.add('cruise', [ 0, 1 ], 20, true)
+          enemy.animations.add('hit', [
+              'enemy5-2',
+              'enemy5-0',
+              'enemy5-2',
+              'enemy5-1'
+            ], 20, false)
+          enemy.animations.add('cruise', [ 'enemy5-0', 'enemy5-1' ], 20, true)
           enemy.events.onAnimationComplete.add( (enemy) ->
             enemy.play('cruise')
           , this)
@@ -1135,11 +1137,92 @@ class Game
     @enemies[enemyIdx].setAll('anchor.x', 0.5)
     @enemies[enemyIdx].setAll('anchor.y', 0.5)
 
+  pauseGame: ->
+    @game.paused = true
+
+    @createPopupOverlay()
+
+    @pausedText = @add.text(400, 150, 'Game Paused',
+      { font: '64px Army Wide', fill: '#fff' }
+    )
+    @pausedText.anchor.setTo(0.5, 0.5)
+
+    @typeHeaderText = @add.text(400, 220, "Game Type:",
+      { font: '18px sans-serif', fill: '#fff' }
+    )
+    @typeHeaderText.anchor.setTo(0.5, 0.5)
+
+    @gameTypeText = @add.text(400, 255, "#{@GAME_LENGTH_TEXT[@game.lengthMultplier]} #{@game.gameType}",
+      { font: '40px sans-serif', fill: '#fff' }
+    )
+    @gameTypeText.anchor.setTo(0.5, 0.5)
+
+    @previousRecordText = @add.text(400, 290, '',
+      { font: '16px sans-serif', fill: '#fff' }
+    )
+    @previousRecordText.anchor.setTo(0.5, 0.5)
+
+    if @game.gameType is 'Time Attack'
+      bestTime = Store.get("bestTime-#{@game.lengthMultplier}")
+      @previousRecordText.text = "(previous record: #{@timeDisplay(parseInt(bestTime))})" if bestTime?
+    else
+      highScore = Store.get("survival-#{@game.lengthMultplier}")
+      @previousRecordText.text = "(previous record: #{highScore} kills)" if highScore?
+    @unpauseText = @add.text(400, 380, "Click/tap outside this box to resume game",
+      { font: '18px Army Wide', fill: '#fff' }
+    )
+    @unpauseText.anchor.setTo(0.5, 0.5)
+    <%#@playAgain = @add.text(400, 320, "Restart Game",%>
+      <%#{ font: '24px Army Wide', fill: '#fff' }%>
+    <%#)%>
+    <%#@playAgain.anchor.setTo(0.5, 0.5)%>
+    <%#@playAgain.inputEnabled = true%>
+    <%#@playAgain.events.onInputDown.add( ->%>
+      <%#@restartGame()%>
+    <%#, this)%>
+
+    <%#@mainMenu = @add.text(400, 350, "Back to Main Menu",%>
+      <%#{ font: '24px Army Wide', fill: '#fff' }%>
+    <%#)%>
+    <%#@mainMenu.anchor.setTo(0.5, 0.5)%>
+    <%#@mainMenu.inputEnabled = true%>
+    <%#@mainMenu.events.onInputDown.add( ->%>
+      <%#@quitGame()%>
+    <%#, this)%>
+
+    @input.onDown.add( (e) ->
+      return unless @game.paused
+      if e.x > 100 and e.x < 700 and e.y > 70 and e.y < 470
+        <%#if e.x > 290 and e.x < 510 and e.y > 310 and e.y < 330%>
+          <%#@restartGame()%>
+        <%#if e.x > 250 and e.x < 550 and e.y > 340 and e.y < 360%>
+          <%#@quitGame()%>
+      else
+        @resumeGame()
+    , this)
+
+  resumeGame: ->
+    @popupOverlay.destroy()
+    @popupBorder.destroy()
+    @pausedText.destroy()
+    @typeHeaderText.destroy()
+    @gameTypeText.destroy()
+    @unpauseText.destroy()
+    @previousRecordText.destroy()
+    <%#@playAgain.destroy()%>
+    <%#@mainMenu.destroy()%>
+    @game.paused = false
+
   displayEnd: (win) ->
     return if @gameEnd
     @gameEnd = true
 
-    @gameTimer.pause()
+    if @game.gameType is 'Time Attack'
+      @gameTimer.pause()
+    else
+      @drainCounter.destroy()
+      @drainText.destroy()
+      @timeText.text = ''
 
     @createPopupOverlay()
 
@@ -1179,7 +1262,7 @@ class Game
       @quitGame()
     , this)
 
-    if @game.gameType is 'time attack'
+    if @game.gameType is 'Time Attack'
       if win
         bestTime = Store.get("bestTime-#{@game.lengthMultplier}")
         if !bestTime? or parseInt(bestTime) > @gameTimer.ms
@@ -1203,7 +1286,7 @@ class Game
         @add.text(400, 225, "New High Score!",
           { font: '32px Army Wide', fill: '#fff' }
         ).anchor.setTo(0.5, 0.5)
-        @add.text(400, 260, @kills,
+        @add.text(400, 260, "#{@kills} kills",
           { font: '32px Army Wide', fill: '#fff' }
         ).anchor.setTo(0.5, 0.5)
         Store.set("survival-#{@game.lengthMultplier}", @kills)
@@ -1225,7 +1308,7 @@ class Game
 
   destroyResources: ->
     @land.destroy()
-    if @game.gameType is 'time attack'
+    if @game.gameType is 'Time Attack'
       @gameTimer.destroy()
     @crosshair.destroy()
     enemy.destroy() for enemy in @enemies
@@ -1241,10 +1324,7 @@ class Game
     @damageSFX.destroy()
     @deck.destroy()
     @energyContainer.destroy()
-    @energyRed.destroy()
-    @energyYellow.destroy()
-    @energyGreen.destroy()
-    @energyBlue.destroy()
+    bar.destroy() for bar in @energyFills
     @killContainer.destroy()
     @killFill.destroy()
     turret.destroy() for k, turret of @turrets
@@ -1255,7 +1335,7 @@ class Game
     @soundIcon.destroy()
     @optionsIcon.destroy()
     @timeText.destroy()
-    @ammoText.destroy()
+    @energyText.destroy()
     @killText.destroy()
     @enemyLvlUpText.destroy()
     @gameEnd = false
