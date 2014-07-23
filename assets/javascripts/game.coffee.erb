@@ -226,10 +226,10 @@ class MainMenu
 
     @addInstructionText 'There are 3 firing modes:', 40, 90
 
-    @addInstructionText 'Single - single turret, fastest rate of fire', 40, 130
-    @addInstructionText 'Triple - use 3 turrets but fire rate is halved', 40, 155
-    @addInstructionText 'Bomb   - slowest fire rate, drop a bomb that explodes ', 40, 180
-    @addInstructionText '         into 10 shots aftera short delay', 40, 205
+    @addInstructionText 'Single (Q) - single turret, fastest rate of fire', 40, 130
+    @addInstructionText 'Triple (W) - use 3 turrets but fire rate is halved', 40, 155
+    @addInstructionText 'Bomb   (E) - slowest fire rate, drop a bomb that explodes ', 40, 180
+    @addInstructionText '             into 10 shots aftera short delay', 40, 205
 
     @addInstructionText 'You regain energy by destroying enemies. ', 40, 245
     @addInstructionText 'Tougher enemies give more energy, but still count as 1 kill.', 40, 270
@@ -603,7 +603,7 @@ class Game
 
     @checkCollision()
 
-    if @energy <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length == 0 and (@bombs.countLiving() == 0)
+    if @energy <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length <= 0 and (@bombs.countLiving() <= 0)
       @displayEnd(false)
 
   render: ->
@@ -1123,7 +1123,8 @@ class Game
     enemy.play('fly')
 
   collisionHandler: (bullet, enemy) ->
-    if bullet.name is 'bullet-burst'
+    if bullet.name is 'bullet-burst' and bullet.inWorld
+      #burst only when within game. bullet still damages, though.
       bullets = @bullets[0]
       angle = Math.random() * 2 * Math.PI
       for i in [0..4]
@@ -1197,8 +1198,9 @@ class Game
       @adjustKillBar()
     else
       @endScore = @ENEMY_LVL_CHART[kills].end / @game.lengthMultplier
-      @endText = @add.text 400, 50, "Destroy an elite fighter or reach #{@endScore} kills to win", { font: '14px Army Wide', fill: '#fff' }
-      @endText.anchor.setTo(0.5, 0.5)
+      if @game.gameType is 'Time Attack'
+        @endText = @add.text 400, 50, "Destroy an elite fighter or reach #{@endScore} kills to win", { font: '14px Army Wide', fill: '#fff' }
+        @endText.anchor.setTo(0.5, 0.5)
 
   unlockEnemy: (enemyIdx, spawnRate, maxCount) ->
     @enemySpawners[enemyIdx] = @game.time.events.loop(spawnRate, @spawnEnemy, this, enemyIdx)
@@ -1505,3 +1507,7 @@ game.state.add('MainMenu', MainMenu)
 game.state.add('Game', Game)
 
 game.state.start('Boot')
+
+<% unless ENV['RACK_ENV'] == 'production' %>
+window.game = game
+<% end %>
