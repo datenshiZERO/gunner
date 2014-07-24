@@ -691,19 +691,22 @@ class Game
 
   setupDeck: ->
     @deck = @add.sprite(0, 520, 'assets', 'deck')
-    @energyContainer = @add.sprite(400, 550, 'assets', 'energy-container')
+
+    @barHeight = if @game.gameType is 'Time Attack' then 30 else 40
+    
+    @energyContainer = @add.sprite(165, @barHeight, 'assets', 'kill-container')
     @energyContainer.anchor.setTo 0.5, 0.5
 
     @energyFills = []
     for i in @ENERGY_BARS
-      bar = @add.sprite(302, 550, 'assets', 'energy-' + i)
+      bar = @add.sprite(37, @barHeight, 'assets', 'energy-' + i)
       bar.anchor.setTo 0, 0.5
       bar.kill()
       @energyFills.push bar
 
-    @killContainer = @add.sprite(400, 580, 'assets', 'kill-container')
+    @killContainer = @add.sprite(635, @barHeight, 'assets', 'kill-container')
     @killContainer.anchor.setTo 0.5, 0.5
-    @killFill = @add.sprite(272, 580, 'assets', 'kill-fill')
+    @killFill = @add.sprite(507, @barHeight, 'assets', 'kill-fill')
     @killFill.anchor.setTo 0, 0.5
     @killFill.scale.setTo 0, 1
 
@@ -714,9 +717,9 @@ class Game
     @bbtnd = {}
     # toggle bullet types
     for i in @FIRING_TYPES
-      @bbtnd[i] = @add.sprite(545 + (@FIRING_TYPES.indexOf(i)) * 85, 535, 'assets', 'bbtnd-' + i)
+      @bbtnd[i] = @add.sprite(495 + (@FIRING_TYPES.indexOf(i)) * 95, 535, 'assets', 'bbtnd-' + i)
       @bbtnd[i].inputEnabled = true
-      @bbtn[i] = @add.sprite(545 + (@FIRING_TYPES.indexOf(i)) * 85, 535,'assets',  'bbtn-' + i)
+      @bbtn[i] = @add.sprite(495 + (@FIRING_TYPES.indexOf(i)) * 95, 535,'assets',  'bbtn-' + i)
       @bbtn[i].inputEnabled = true
       @bbtnd[i].kill()
 
@@ -730,9 +733,9 @@ class Game
       )(@bbtn[i], @bbtnd[i], i, this)
 
     for i in @BULLET_TYPES
-      @bbtnd[i] = @add.sprite(5 + (@BULLET_TYPES.indexOf(i)) * 85, 535, 'assets', 'bbtnd-' + i)
+      @bbtnd[i] = @add.sprite(30 + (@BULLET_TYPES.indexOf(i)) * 95, 535, 'assets', 'bbtnd-' + i)
       @bbtnd[i].inputEnabled = true
-      @bbtn[i] = @add.sprite(5 + (@BULLET_TYPES.indexOf(i)) * 85, 535, 'assets', 'bbtn-' + i)
+      @bbtn[i] = @add.sprite(30 + (@BULLET_TYPES.indexOf(i)) * 95, 535, 'assets', 'bbtn-' + i)
       @bbtn[i].inputEnabled = true
       @bbtnd[i].kill()
 
@@ -755,7 +758,7 @@ class Game
       @rightTurrets[i] = @add.sprite(500, 525, 'assets', 'turret-' + i)
       @rightTurrets[i].anchor.setTo(0.3, 0.5)
 
-    @soundIcon = @add.sprite(280, 550, 'assets', 'sound-0')
+    @soundIcon = @add.sprite(360, 560, 'assets', 'sound-0')
     @soundIcon.anchor.setTo(0.5, 0.5)
     @soundIcon.animations.add('on', ['sound-0'])
     @soundIcon.animations.add('off', ['sound-1'])
@@ -770,7 +773,7 @@ class Game
         @soundIcon.play('off')
     , this)
 
-    @optionsIcon = @add.sprite(520, 550, 'assets', 'options')
+    @optionsIcon = @add.sprite(440, 560, 'assets', 'options')
     @optionsIcon.anchor.setTo(0.5, 0.5)
     @optionsIcon.inputEnabled = true
     @optionsIcon.events.onInputDown.add( ->
@@ -789,11 +792,11 @@ class Game
     @timeText.anchor.setTo(0.5, 0.5)
 
 
-    @energyText = @add.text(400, 550, 'Energy: ' + @energy, { font: '14px Army Wide', fill: '#fff',  })
+    @energyText = @add.text(165, @barHeight, 'Energy: ' + @energy, { font: '14px Army Wide', fill: '#fff',  })
     @energyText.anchor.setTo(0.5, 0.5)
     @adjustEnergyBar()
 
-    @killText = @add.text(400, 580, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
+    @killText = @add.text(635, @barHeight, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
     @killText.anchor.setTo(0.5, 0.5)
 
     @enemyLvlUpText = @add.text(400, 250, "", { font: '20px Army Wide', fill: '#fff' })
@@ -814,27 +817,27 @@ class Game
 
     @energyFills[0].revive() unless @energyFills[0].alive
     if @energy <= @ENERGY_TIERS[0]
-      @energyFills[0].scale.setTo((196 * @energy / @ENERGY_TIERS[0]), 1)
+      @energyFills[0].scale.setTo((256 * @energy / @ENERGY_TIERS[0]), 1)
       return
-    @energyFills[0].scale.setTo(196, 1)
+    @energyFills[0].scale.setTo(256, 1)
 
     @energyFills[1].revive() unless @energyFills[1].alive
     if @energy <= @ENERGY_TIERS[1]
-      @energyFills[1].scale.setTo(196 * (@energy - @ENERGY_TIERS[0]) / (@ENERGY_TIERS[1] - @ENERGY_TIERS[0]), 1)
+      @energyFills[1].scale.setTo(256 * (@energy - @ENERGY_TIERS[0]) / (@ENERGY_TIERS[1] - @ENERGY_TIERS[0]), 1)
       return
-    @energyFills[1].scale.setTo(196, 1)
+    @energyFills[1].scale.setTo(256, 1)
 
     @energyFills[2].revive() unless @energyFills[2].alive
     if @energy <= @ENERGY_TIERS[2]
-      @energyFills[2].scale.setTo(196 * (@energy - @ENERGY_TIERS[1]) / (@ENERGY_TIERS[2] - @ENERGY_TIERS[1]), 1)
+      @energyFills[2].scale.setTo(256 * (@energy - @ENERGY_TIERS[1]) / (@ENERGY_TIERS[2] - @ENERGY_TIERS[1]), 1)
       return
-    @energyFills[2].scale.setTo(196, 1)
+    @energyFills[2].scale.setTo(256, 1)
 
     @energyFills[3].revive() unless @energyFills[3].alive
     if @energy <= @ENERGY_TIERS[3]
-      @energyFills[3].scale.setTo(196 * (@energy - @ENERGY_TIERS[2]) / (@ENERGY_TIERS[3] - @ENERGY_TIERS[2]), 1)
+      @energyFills[3].scale.setTo(256 * (@energy - @ENERGY_TIERS[2]) / (@ENERGY_TIERS[3] - @ENERGY_TIERS[2]), 1)
       return
-    @energyFills[3].scale.setTo(196, 1)
+    @energyFills[3].scale.setTo(256, 1)
   
   adjustKillBar: ->
     if @nextEnemyLvlUp is null and @kills >= @endScore
