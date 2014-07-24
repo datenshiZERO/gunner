@@ -52,18 +52,19 @@ class Preloader
     @loadingText.anchor.setTo(0.5, 0.5)
     @preloaderBar = @add.sprite(400, 300, 'preloaderBar')
     @preloaderBar.anchor.setTo(0.5, 0.5)
+    @add.text(400, 270, "", { font: '30px Special Elite', fill: '#fff' })
 
     @load.setPreloadSprite(@preloaderBar)
 
     @load.atlas('assets', '<%= image_path('atlas.png') %>', '<%= image_path('atlas.json') %>')
     @load.image('sea', '<%= image_path('sea.png') %>')
 
-    @load.audio('fire', ['<%= audio_path("fire.wav") %>'])
-    @load.audio('burst', ['<%= audio_path("burst.wav") %>'])
-    @load.audio('bomb', ['<%= audio_path("bomb.wav") %>'])
-    @load.audio('explosion', ['<%= audio_path("explosion.wav") %>'])
-    @load.audio('explosion2', ['<%= audio_path("explosion2.wav") %>'])
-    @load.audio('damage', ['<%= audio_path("damage.wav") %>'])
+    @load.audio('fire', ['<%= audio_path("fire.ogg") %>', '<%= audio_path("fire.mp3") %>'])
+    @load.audio('burst', ['<%= audio_path("burst.ogg") %>', '<%= audio_path("burst.mp3") %>'])
+    @load.audio('bomb', ['<%= audio_path("bomb.ogg") %>', '<%= audio_path("bomb.mp3") %>'])
+    @load.audio('explosion', ['<%= audio_path("explosion.ogg") %>', '<%= audio_path("explosion.mp3") %>'])
+    @load.audio('explosion2', ['<%= audio_path("explosion2.ogg") %>', '<%= audio_path("explosion2.mp3") %>'])
+    @load.audio('damage', ['<%= audio_path("damage.ogg") %>', '<%= audio_path("damage.mp3") %>'])
 
   create: ->
     @state.start('MainMenu')
@@ -96,7 +97,7 @@ class MainMenu
   addInstructionText: (text, x, y, header) ->
     @menuTexts[text] = @add.text(x, y, text,
       {
-        font: "#{ if header then 32 else 20 }px monospace",
+        font: "#{ if header then 32 else 20 }px Special Elite",
         fill: '#fff'
       })
     @menuTexts[text].anchor.setTo((if header then 0.5 else 0), 0.5)
@@ -105,7 +106,7 @@ class MainMenu
   addTutorialText: (text, x, y, header) ->
     @menuTexts[text] = @add.text(x, y, text,
       {
-        font: "#{ if header then 32 else 20 }px monospace",
+        font: "#{ if header then 32 else 20 }px Special Elite",
         fill: '#fff'
       })
     @menuTexts[text].anchor.setTo(0.5, 0.5)
@@ -114,7 +115,7 @@ class MainMenu
   addCreditsText: (text, y) ->
     @menuTexts[text] = @add.text(400, y, text,
       {
-        font: "26px monospace",
+        font: "26px Special Elite",
         fill: '#fff'
       })
     @menuTexts[text].anchor.setTo(0.5, 0.5)
@@ -246,7 +247,7 @@ class MainMenu
     @addInstructionText 'Single (Q) - single turret, fastest rate of fire', 40, 130
     @addInstructionText 'Triple (W) - use 3 turrets but fire rate is halved', 40, 155
     @addInstructionText 'Bomb   (E) - slowest fire rate, drop a bomb that explodes ', 40, 180
-    @addInstructionText '             into 10 shots aftera short delay', 40, 205
+    @addInstructionText '             into 10 shots after a short delay', 40, 205
 
     @addInstructionText 'You regain energy by destroying enemies. ', 40, 245
     @addInstructionText 'Tougher enemies give more energy, but still count as 1 kill.', 40, 270
@@ -265,23 +266,28 @@ class MainMenu
     text.destroy() for key, text of @menuTexts
     @titleText.visible = false
     if @game.gameType is 'Time Attack'
-      @addText '  Time Attack  ', 400, 100, true
-
+      text = '  Time Attack  '
       @addTutorialText "Reach #{15000 / @game.lengthMultplier} kills or destroy an", 400, 150, true
       @addTutorialText "elite fighter as soon as possible.", 400, 190, true
     else
-      @addText '  Survival  ', 400, 100, true
+      text = '  Survival  '
       @addTutorialText "Destroy as many enemies as possible.", 400, 150, true
       @addTutorialText "You will lose energy every minute.", 400, 190, true
 
+    @menuTexts[text] = @add.text(400, 80, text,
+      {
+        font: "64px Special Elite",
+        fill: '#fff'
+      })
+    @menuTexts[text].anchor.setTo(0.5, 0.5)
     @addTutorialText "Click or tap screen to shoot. Different firing modes", 400, 260
     @addTutorialText "can be selected at the bottom by clicking/tapping.", 400, 285
 
     @addTutorialText "Shooting consumes energy, destroying enemies provide energy.", 400, 330
     @addTutorialText "Tougher enemies give more energy but still count as 1 kill.", 400, 355
     
-    @addTutorialText "Enemies cannot damage you, but it's game over", 400, 400
-    @addTutorialText "if your energy reaches 0", 400, 425
+    @addTutorialText "Enemies cannot damage you, but it's game over if you", 400, 400
+    @addTutorialText "waste all of your energy (i.e. reaches 0)", 400, 425
 
     @addText 'Proceed to Game', 400, 500, true
     @addText 'Skip this screen from now on', 400, 550, false
@@ -590,7 +596,7 @@ class Game
     @endScore = null
 
     @land = @add.tileSprite(0, 0, 800, 530, 'sea')
-    @land.autoScroll 0, 30
+    @land.autoScroll -30, 10
     @stage.backgroundColor = '#333'
 
     if @game.gameType is 'Time Attack'
@@ -645,8 +651,13 @@ class Game
 
     @checkCollision()
 
-    if @energy <= 0 and (true for bullets in @bullets when bullets.countLiving() > 0).length <= 0 and (@bombs.countLiving() <= 0)
-      @displayEnd(false)
+    if @energy <= 0
+      for bullets in @bullets
+        for bullet in bullets.children
+          bullet.kill() if bullet.alive and !bullet.inWorld
+
+      if (true for bullets in @bullets when bullets.countLiving() > 0).length <= 0 and (@bombs.countLiving() <= 0)
+        @displayEnd(false)
 
   render: ->
     unless @gameEnd
@@ -835,20 +846,20 @@ class Game
       @timeText = @add.text(400, 30, '', { font: '28px sans-serif', fill: '#fff' })
     else
       @timeText = @add.text(400, 50, '', { font: '28px sans-serif', fill: '#fff' })
-      @drainText = @add.text(400, 20, "-#{@calcDrain()} energy in:", { font: '14px Army Wide', fill: '#fff',  })
+      @drainText = @add.text(400, 20, "-#{@calcDrain()} energy in:", { font: '14px Special Elite', fill: '#fff',  })
       @drainText.anchor.setTo(0.5, 0.5)
 
     @timeText.anchor.setTo(0.5, 0.5)
 
 
-    @energyText = @add.text(165, @barHeight, 'Energy: ' + @energy, { font: '14px Army Wide', fill: '#fff',  })
+    @energyText = @add.text(165, @barHeight + 1, 'Energy: ' + @energy, { font: '14px Special Elite', fill: '#fff',  })
     @energyText.anchor.setTo(0.5, 0.5)
     @adjustEnergyBar()
 
-    @killText = @add.text(635, @barHeight, "Kills: 0", { font: '14px Army Wide', fill: '#fff' })
+    @killText = @add.text(635, @barHeight + 1, "Kills: 0", { font: '14px Special Elite', fill: '#fff' })
     @killText.anchor.setTo(0.5, 0.5)
 
-    @enemyLvlUpText = @add.text(400, 250, "", { font: '20px Army Wide', fill: '#fff' })
+    @enemyLvlUpText = @add.text(400, 250, "", { font: '20px Special Elite', fill: '#fff' })
     @enemyLvlUpText.anchor.setTo(0.5, 0.5)
 
   adjustEnergyBar: ->
@@ -1083,20 +1094,31 @@ class Game
 
   spawnRookies: ->
     enemy = @enemies[0].getFirstExists(false)
-    enemy.reset(20 + Math.random() * 760, 0)
-    enemy.body.velocity.y = 30 + Math.random() * 30
+    if Math.random() < 0.3
+      enemy.reset(0, @rnd.integerInRange(20, 480))
+      enemy.body.velocity.x = @rnd.integerInRange(10, 40)
+      enemy.rotation = -Math.PI / 2
+    else
+      enemy.reset(800, @rnd.integerInRange(20, 480))
+      enemy.body.velocity.x = -(@rnd.integerInRange(40, 70))
+      enemy.rotation = Math.PI / 2
     enemy.play('fly')
 
   spawnRegulars: ->
     enemy = @enemies[1].getFirstExists(false)
-    if Math.random() < 0.5
-      enemy.reset(0, 20 + Math.random() * 420)
-      enemy.body.velocity.x = 40 + Math.random() * 40
-      enemy.rotation = -Math.PI / 2
+    start = @rnd.integerInRange(20, 500)
+    end = @rnd.integerInRange(20, 500)
+    velocity = @rnd.integerInRange(60, 90)
+    if Math.random() < 0.3
+      enemy.reset(0, start)
+      enemy.rotation = @physics.arcade.moveToXY(
+        enemy, 800, end, velocity * 0.5
+      ) - Math.PI / 2
     else
-      enemy.reset(800, 20 + Math.random() * 420)
-      enemy.body.velocity.x = -(40 + Math.random() * 40)
-      enemy.rotation = Math.PI / 2
+      enemy.reset(800, start)
+      enemy.rotation = @physics.arcade.moveToXY(
+        enemy, 0, end, velocity
+      ) - Math.PI / 2
     enemy.play('fly')
 
   spawnSubs: ->
@@ -1113,7 +1135,7 @@ class Game
     if Math.random() < 0.5
       enemy.reset(Math.random() * 200, y)
       enemy.rotation = -Math.PI / 2
-      enemy.body.velocity.x = 20 + Math.random() * 20
+      enemy.body.velocity.x = 5 + Math.random() * 10
     else
       enemy.reset(800 - Math.random() * 200, y)
       enemy.rotation = Math.PI / 2
@@ -1123,18 +1145,18 @@ class Game
 
   spawnVets: ->
     enemy = @enemies[3].getFirstExists(false)
-    start = @rnd.integerInRange(20, 500)
-    end = @rnd.integerInRange(20, 500)
-    enemy.body.velocity.x = 60 + Math.random() * 60
+    start = @rnd.integerInRange(20, 780)
+    end = @rnd.integerInRange(20, 780)
+    velocity = @rnd.integerInRange(60, 120)
     if Math.random() < 0.5
-      enemy.reset(0, start)
+      enemy.reset(start, 0)
       enemy.rotation = @physics.arcade.moveToXY(
-        enemy, 800, end, @rnd.integerInRange(60, 120)
+        enemy, end, 520, velocity
       ) - Math.PI / 2
     else
-      enemy.reset(800, start)
+      enemy.reset(start, 520)
       enemy.rotation = @physics.arcade.moveToXY(
-        enemy, 0, end, @rnd.integerInRange(60, 120)
+        enemy, end, 0, velocity
       ) - Math.PI / 2
     enemy.play('fly')
 
@@ -1175,8 +1197,7 @@ class Game
     enemy.play('fly')
 
   collisionHandler: (bullet, enemy) ->
-    if bullet.name is 'bullet-burst' and bullet.inWorld
-      #burst only when within game. bullet still damages, though.
+    if bullet.name is 'bullet-burst'
       bullets = @bullets[0]
       angle = Math.random() * 2 * Math.PI
       for i in [0..4]
@@ -1204,7 +1225,7 @@ class Game
       enemy.kill()
       explosion.play('explosion', 15, false, true)
 
-      reward = @add.text(enemy.x, enemy.y, "#{@REWARD[enemy.name]}", { font: '16px Army Wide', fill: '#fff' })
+      reward = @add.text(enemy.x, enemy.y, "#{@REWARD[enemy.name]}", { font: '16px Special Elite', fill: '#fff' })
       reward.anchor.setTo(0.5, 0.5)
       rise = @add.tween(reward)
       rise.to({ y: enemy.y - 16 }, 250)
@@ -1238,7 +1259,7 @@ class Game
       when "setSpawnRate"
         @time.events.remove @enemySpawners[action[1]]
         @enemySpawners[action[1]] = @game.time.events.loop(action[2], @spawnEnemy, this, action[1])
-        @enemyLvlUpText.text = @ENEMY_TYPES[action[1]] + "s are arriving at a faster rate!"
+        @enemyLvlUpText.text = @ENEMY_TYPES[action[1]] + "s have called for reinforcements!"
         @setLvlUpExpire()
       when "setMaxCount"
         @setMaxCount(action[1], action[2])
@@ -1260,7 +1281,7 @@ class Game
     @enemies[enemyIdx].createMultiple(maxCount, 'assets', 'enemy' + enemyIdx + '-0', false)
     @enemies[enemyIdx].setAll('name', 'enemy' + enemyIdx)
     @setSpriteInfo(enemyIdx)
-    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s incoming!"
+    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s spotted!"
     @setLvlUpExpire()
 
   setMaxCount: (enemyIdx, maxCount) ->
@@ -1269,7 +1290,7 @@ class Game
       @enemies[enemyIdx].createMultiple(maxCount - current, 'assets', 'enemy' + enemyIdx + '-0', false)
       @enemies[enemyIdx].setAll('name', 'enemy' + enemyIdx)
     @setSpriteInfo(enemyIdx)
-    @enemyLvlUpText.text = @ENEMY_TYPES[enemyIdx] + "s have increased in numbers!"
+    @enemyLvlUpText.text = "More #{@ENEMY_TYPES[enemyIdx] }s spotted!"
     @setLvlUpExpire()
 
   setLvlUpExpire: ->
