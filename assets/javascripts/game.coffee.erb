@@ -102,6 +102,15 @@ class MainMenu
     @menuTexts[text].anchor.setTo((if header then 0.5 else 0), 0.5)
     return @menuTexts[text]
 
+  addTutorialText: (text, x, y, header) ->
+    @menuTexts[text] = @add.text(x, y, text,
+      {
+        font: "#{ if header then 32 else 20 }px monospace",
+        fill: '#fff'
+      })
+    @menuTexts[text].anchor.setTo(0.5, 0.5)
+    return @menuTexts[text]
+
   addCreditsText: (text, y) ->
     @menuTexts[text] = @add.text(400, y, text,
       {
@@ -139,6 +148,14 @@ class MainMenu
         Store.set('gameLength', @game.lengthMultplier)
         @game.gameType = 'time atttack' unless @game.gameType?
         Store.set('gameType', @game.gameType)
+        if Store.get('skipTutorial')?
+          @game.state.start('Game')
+        else
+          state.displayTutorial()
+      when "Skip this screen from now on"
+        Store.set('skipTutorial', 'skip')
+        @game.state.start('Game')
+      when "Proceed to Game"
         @game.state.start('Game')
       when "How To Play"
         state.displayInstructions()
@@ -243,6 +260,31 @@ class MainMenu
 
     @addText 'Previous Page', 400, 500, true
     @addText 'Back to Main Menu', 400, 550, false
+
+  displayTutorial: ->
+    text.destroy() for key, text of @menuTexts
+    @titleText.visible = false
+    if @game.gameType is 'Time Attack'
+      @addText '  Time Attack  ', 400, 100, true
+
+      @addTutorialText "Reach #{15000 / @game.lengthMultplier} kills or destroy an", 400, 150, true
+      @addTutorialText "elite fighter as soon as possible.", 400, 190, true
+    else
+      @addText '  Survival  ', 400, 100, true
+      @addTutorialText "Destroy as many enemies as possible.", 400, 150, true
+      @addTutorialText "You will lose energy every minute.", 400, 190, true
+
+    @addTutorialText "Click or tap screen to shoot. Different firing modes", 400, 260
+    @addTutorialText "can be selected at the bottom by clicking/tapping.", 400, 285
+
+    @addTutorialText "Shooting consumes energy, destroying enemies provide energy.", 400, 330
+    @addTutorialText "Tougher enemies give more energy but still count as 1 kill.", 400, 355
+    
+    @addTutorialText "Enemies cannot damage you, but it's game over", 400, 400
+    @addTutorialText "if your energy reaches 0", 400, 425
+
+    @addText 'Proceed to Game', 400, 500, true
+    @addText 'Skip this screen from now on', 400, 550, false
 
   displayHighScores: ->
     text.destroy() for key, text of @menuTexts
@@ -560,12 +602,12 @@ class Game
       @drainCounter.loop(60000, ->
         @energy -= @calcDrain()
         @adjustEnergyBar()
-        penalty = @add.text(400, 550, "-#{@calcDrain()}", { font: '24px Army Wide', fill: '#fff' })
+        penalty = @add.text(165, @barHeight, "-#{@calcDrain()}", { font: '24px Army Wide', fill: '#fff' })
         penalty.anchor.setTo(0.5, 0.5)
         rise = @add.tween(penalty)
-        rise.to({ y: 500 })
+        rise.to({ y: @barHeight + 50 })
         fade = @add.tween(penalty)
-        fade.to({ y: 450, alpha: 0 })
+        fade.to({ y: @barHeight + 100, alpha: 0 })
         rise.chain(fade)
         fade.onComplete.add(->
           @destroy()
@@ -613,6 +655,13 @@ class Game
       else
         @timeText.text = @timeDisplay(@drainCounter.duration)
 
+    if @delayedAction?
+      if @delayedAction is 'restart'
+        @delayedAction = null
+        @restartGame()
+      if @delayedAction is 'quit'
+        @delayedAction = null
+        @quitGame()
     return
 
   timeDisplay:(ms) ->
@@ -1314,35 +1363,29 @@ class Game
     else
       highScore = Store.get("survival-#{@game.lengthMultplier}")
       @previousRecordText.text = "(previous record: #{highScore} kills)" if highScore?
-    @unpauseText = @add.text(400, 380, "Click/tap outside this box to resume game",
+    @unpauseText = @add.text(400, 420, "Click/tap outside this box to resume game",
       { font: '18px Army Wide', fill: '#fff' }
     )
     @unpauseText.anchor.setTo(0.5, 0.5)
-    <%#@playAgain = @add.text(400, 320, "Restart Game",%>
-      <%#{ font: '24px Army Wide', fill: '#fff' }%>
-    <%#)%>
-    <%#@playAgain.anchor.setTo(0.5, 0.5)%>
-    <%#@playAgain.inputEnabled = true%>
-    <%#@playAgain.events.onInputDown.add( ->%>
-      <%#@restartGame()%>
-    <%#, this)%>
+    @playAgain = @add.text(400, 340, "Restart Game",
+      { font: '24px Army Wide', fill: '#fff' }
+    )
+    @playAgain.anchor.setTo(0.5, 0.5)
 
-    <%#@mainMenu = @add.text(400, 350, "Back to Main Menu",%>
-      <%#{ font: '24px Army Wide', fill: '#fff' }%>
-    <%#)%>
-    <%#@mainMenu.anchor.setTo(0.5, 0.5)%>
-    <%#@mainMenu.inputEnabled = true%>
-    <%#@mainMenu.events.onInputDown.add( ->%>
-      <%#@quitGame()%>
-    <%#, this)%>
+    @mainMenu = @add.text(400, 370, "Back to Main Menu",
+      { font: '24px Army Wide', fill: '#fff' }
+    )
+    @mainMenu.anchor.setTo(0.5, 0.5)
 
     @input.onDown.add( (e) ->
       return unless @game.paused
       if e.x > 100 and e.x < 700 and e.y > 70 and e.y < 470
-        <%#if e.x > 290 and e.x < 510 and e.y > 310 and e.y < 330%>
-          <%#@restartGame()%>
-        <%#if e.x > 250 and e.x < 550 and e.y > 340 and e.y < 360%>
-          <%#@quitGame()%>
+        if e.x > 290 and e.x < 510 and e.y > 330 and e.y < 350
+          @delayedAction = 'restart'
+          @resumeGame()
+        if e.x > 250 and e.x < 550 and e.y > 360 and e.y < 380
+          @delayedAction = 'quit'
+          @resumeGame()
       else
         @resumeGame()
     , this)
@@ -1354,8 +1397,8 @@ class Game
     @gameTypeText.destroy()
     @unpauseText.destroy()
     @previousRecordText.destroy()
-    <%#@playAgain.destroy()%>
-    <%#@mainMenu.destroy()%>
+    @playAgain.destroy()
+    @mainMenu.destroy()
     @game.paused = false
 
   displayEnd: (win) ->
