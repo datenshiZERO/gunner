@@ -81,8 +81,8 @@ class MainMenu
     @game.gameType = if gt? then gt else 'Time Attack'
 
     @menuTexts = {}
+    @menuImages = []
     @setupTopLevel()
-
 
   addText: (text, x, y, selected, small) ->
     @menuTexts[text] = @add.text(x, y, text,
@@ -170,27 +170,27 @@ class MainMenu
         state.displayCredits()
 
   setupTopLevel: ->
-    text.destroy() for key, text of @menuTexts
-    @addText 'Play Game', 400, 350, true
-    @addText 'How To Play', 400, 390, false
-    @addText 'High Scores', 400, 430, false
-    @addText 'Credits & Misc', 400, 470, false
+    @clearText()
+    @addText 'Play Game', 400, 310, true
+    @addText 'How To Play', 400, 360, false
+    @addText 'High Scores', 400, 410, false
+    @addText 'Credits & Misc', 400, 460, false
     @game.menuIndex = 0
 
   setupOptions: ->
-    text.destroy() for key, text of @menuTexts
+    @clearText()
 
-    @addText 'Game Type', 230, 300, true
-    @addText 'Time Attack', 230, 350, false, true
-    @addText 'Survival', 230, 380, false, true
-    @addText 'Game Length', 570, 300, true
-    @addText 'Quick', 570, 340, false, true
+    @addText 'Game Type', 230, 270, true
+    @addText 'Time Attack', 230, 340, false, true
+    @addText 'Survival', 230, 390, false, true
+    @addText 'Game Length', 570, 270, true
+    @addText 'Quick', 570, 330, false, true
     @addText 'Normal', 570, 370, false, true
-    @addText 'Extended', 570, 400, false, true
+    @addText 'Extended', 570, 410, false, true
     @highlightLength()
     @highlightType()
-    @addText 'Start Game', 400, 470, true
-    @addText 'Back to Main Menu', 400, 510, false, true
+    @addText 'Start Game', 400, 480, true
+    @addText 'Back to Main Menu', 400, 530, false, true
 
   highlightType: ->
     @menuTexts["Time Attack"].fill = "#888"
@@ -214,14 +214,14 @@ class MainMenu
         @menuTexts["Extended"].fill = "#fff"
 
   displayInstructions: ->
-    text.destroy() for key, text of @menuTexts
+    @clearText()
     @titleText.visible = false
     @addInstructionText 'How To Play', 400, 50, true
 
     @addTutorialText 'This game has 2 modes: ', 400, 100
 
-    @addInstructionText 'Time Attack - finish the game as soon as possible ', 80, 135
-    @addInstructionText 'Survival - destroy as many as enemies as you can before losing', 80, 160
+    @addInstructionText 'Time Attack - finish the game as soon as possible ', 70, 135
+    @addInstructionText 'Survival - destroy as many as enemies as you can before losing', 70, 160
 
     @addTutorialText 'Shoot by clicking or tapping on the spot you wish to fire at.', 400, 210
     @addTutorialText 'Hold down click/tap for continuous fire. You can also use the arrow', 400, 235
@@ -240,7 +240,7 @@ class MainMenu
     @addText 'Back to Main Menu', 400, 550, false
 
   displayInstructions2: ->
-    text.destroy() for key, text of @menuTexts
+    @clearText()
     @titleText.visible = false
     @addInstructionText 'How To Play', 400, 50, true
 
@@ -267,7 +267,7 @@ class MainMenu
     @addText 'Back to Main Menu', 400, 550, false
 
   displayTutorial: ->
-    text.destroy() for key, text of @menuTexts
+    @clearText()
     @titleText.visible = false
     if @game.gameType is 'Time Attack'
       text = '  Time Attack  '
@@ -297,7 +297,7 @@ class MainMenu
     @addText 'Skip this screen from now on', 400, 550, false
 
   displayHighScores: ->
-    text.destroy() for key, text of @menuTexts
+    @clearText()
     @addText ' Time Attack ', 230, 300, true
     @addText ' Survival ', 570, 300, true
     @addText 'Quick: ' +
@@ -339,6 +339,11 @@ class MainMenu
       , 570, 400, true, true
     @addText 'Back to Main Menu', 400, 510, true
 
+  clearText: ->
+    text.destroy() for key, text of @menuTexts
+    image.destroy() for image in @menuImages
+
+
   timeDisplay:(ms) ->
     minutes = Math.floor(ms / 60000)
     seconds = ms - (minutes * 60000)
@@ -351,50 +356,72 @@ class MainMenu
     @titleText.visible = false
     @addInstructionText 'Credits', 400, 50, true
 
-    l = @addCreditsText 'Made with Phaser 2.0.7', 170
+    l = @addCreditsText 'Made with Phaser 2.0.7', 110
     l.inputEnabled = true
     l.events.onInputDown.add( ->
       win = window.open("http://phaser.io", '_blank')
       win.focus()
     , this)
-    l = @addCreditsText 'Copyright (c) 2014 Bryan Bibat', 210
+    l = @addCreditsText 'Copyright (c) 2014 Bryan Bibat', 150
     l.inputEnabled = true
     l.events.onInputDown.add( ->
       win = window.open("http://bryanbibat.net", '_blank')
       win.focus()
     , this)
 
-    l = @addCreditsText 'sprites (c) 2002 Ari Feldman', 250
+    l = @addCreditsText 'sprites (c) 2002 Ari Feldman', 190
     l.inputEnabled = true
     l.events.onInputDown.add( ->
       win = window.open("www.widgetworx.com/spritelib/", '_blank')
       win.focus()
     , this)
 
-    l = @addCreditsText 'sounds (c) 2013 dklon (Devin Watson)', 290
+    l = @addCreditsText 'sounds (c) 2013 dklon (Devin Watson)', 230
     l.inputEnabled = true
     l.events.onInputDown.add( ->
       win = window.open("http://opengameart.org/users/dklon", '_blank')
       win.focus()
     , this)
 
-    twitter = @addInstructionText 'Tap here to share this on Twitter', 400, 380, true
-    twitter.inputEnabled = true
-    twitter.events.onInputDown.add( ->
-      url = encodeURIComponent("http://datenshizero.github.io/gunner")
-      text = encodeURIComponent("Play Gunner, a WWII themed HTML5 game where you destroy waves of enemy planes and ships")
-      win = window.open("https://twitter.com/intent/tweet?url=#{url}&text=#{text}", '_blank')
-      win.focus()
-    , this)
+    share = @addInstructionText 'Spread the word:', 210, 300, true
 
-    book = @addCreditsText 'Tap here to learn how to make games like this', 440
+    book = @addTutorialText 'Read a book on how to make\nHTML5 games like this:', 570, 300
     book.inputEnabled = true
+    book.align = 'center'
     book.events.onInputDown.add( ->
       win = window.open("https://leanpub.com/html5shootemupinanafternoon", '_blank')
       win.focus()
     , this)
 
-    @addText 'Back to Main Menu', 400, 550, true
+    url = encodeURIComponent("http://datenshizero.github.io/gunner")
+    ogUrl = encodeURIComponent("<%= image_path 'opengraph.png' %>")
+    text = encodeURIComponent("Play Gunner, a WWII themed HTML5 game where you destroy waves of enemy planes and ships")
+    fullUrl = "https://twitter.com/intent/tweet?url=#{url}&text=#{text}"
+    
+    @addIcon 110, 370, 'twitter', fullUrl
+    fullUrl ="https://www.facebook.com/dialog/share?app_id=488047311326879&href=#{url}&display=page&redirect_uri=https://facebook.com"
+    @addIcon 210, 370, 'facebook', fullUrl
+    fullUrl = "http://www.tumblr.com/share/link?url=#{url}&name=Gunner&description=#{text}"
+    @addIcon 310, 370, 'tumblr', fullUrl
+    fullUrl = "http://www.pinterest.com/pin/create/button/?url=#{url}&media=#{ogUrl}&description=#{text}"
+    @addIcon 160, 470, 'pinterest', fullUrl
+    fullUrl = "https://plus.google.com/share?url=#{url}"
+    @addIcon 260, 470, 'gplus', fullUrl
+
+    @addIcon 570, 420, 'book', "https://leanpub.com/html5shootemupinanafternoon"
+
+    @addText 'Back to Main Menu', 400, 560, true
+
+  addIcon: (x, y, filename, url) ->
+    icon = @add.sprite(x, y, 'assets', filename)
+    icon.anchor.setTo(0.5, 0.5)
+    icon.inputEnabled = true
+    icon.events.onInputDown.add( ->
+      win = window.open(url, '_blank')
+      win.focus()
+    , this)
+    @menuImages.push icon
+
 
 class Game
   @RKE_FIGHTER = 0
@@ -612,7 +639,7 @@ class Game
       @drainCounter.loop(60000, ->
         @energy -= @calcDrain()
         @adjustEnergyBar()
-        penalty = @add.text(165, @barHeight, "-#{@calcDrain()}", { font: '24px Army Wide', fill: '#fff' })
+        penalty = @add.text(165, @barHeight, "-#{@calcDrain()}", { font: '24px Special Elite', fill: '#fff' })
         penalty.anchor.setTo(0.5, 0.5)
         rise = @add.tween(penalty)
         rise.to({ y: @barHeight + 50 })
@@ -642,6 +669,8 @@ class Game
     @setupDeck()
     @setupAudio()
     @setupText()
+
+    @shareImages = []
 
     @levelUpEnemy(0)
     @time.advancedTiming = true
@@ -1311,7 +1340,7 @@ class Game
       when "setSpawnRate"
         @time.events.remove @enemySpawners[action[1]]
         @enemySpawners[action[1]] = @game.time.events.loop(action[2], @spawnEnemy, this, action[1])
-        @enemyLvlUpText.text = @ENEMY_TYPES[action[1]] + "s have called for reinforcements!"
+        @enemyLvlUpText.text = "Reinforcements for #{@ENEMY_TYPES[action[1]]}s incoming!"
         @setLvlUpExpire()
       when "setMaxCount"
         @setMaxCount(action[1], action[2])
@@ -1436,16 +1465,16 @@ class Game
     else
       highScore = Store.get("survival-#{@game.lengthMultplier}")
       @previousRecordText.text = "(previous record: #{highScore} kills)" if highScore?
-    @unpauseText = @add.text(400, 420, "Click/tap outside this box to resume game",
+    @unpauseText = @add.text(400, 440, "Click/tap outside this box to resume game",
       { font: '18px Army Wide', fill: '#fff' }
     )
     @unpauseText.anchor.setTo(0.5, 0.5)
-    @playAgain = @add.text(400, 340, "Restart Game",
+    @playAgain = @add.text(400, 350, "Restart Game",
       { font: '24px Army Wide', fill: '#fff' }
     )
     @playAgain.anchor.setTo(0.5, 0.5)
 
-    @mainMenu = @add.text(400, 370, "Back to Main Menu",
+    @mainMenu = @add.text(400, 390, "Back to Main Menu",
       { font: '24px Army Wide', fill: '#fff' }
     )
     @mainMenu.anchor.setTo(0.5, 0.5)
@@ -1523,22 +1552,24 @@ class Game
       @quitGame()
     , this)
 
-    twitter = @add.text(400, 400, "Share this on Twitter",
-      { font: '24px Army Wide', fill: '#55ACEE' }
-    )
-    twitter.anchor.setTo(0.5, 0.5)
-    twitterUrl = encodeURIComponent("http://datenshizero.github.io/gunner")
-    twitterText = encodeURIComponent("Play Gunner, a WWII themed HTML5 game where you destroy waves of enemy planes and ships")
-    if win
-      twitterText = encodeURIComponent("I beat the #{@GAME_LENGTH_TEXT[@game.lengthMultplier]} #{@game.gameType} mode of Gunner in #{@timeDisplay(@gameTimer.ms)}. Try beating my time at")
-    else if @game.gameType is 'Survival'
-      twitterText = encodeURIComponent("I destroyed #{@kills} enemies in the #{@GAME_LENGTH_TEXT[@game.lengthMultplier]} #{@game.gameType} mode of Gunner before dying. Try beating my score at")
+    url = encodeURIComponent("http://datenshizero.github.io/gunner")
+    ogUrl = encodeURIComponent("<%= image_path 'opengraph.png' %>")
+    text = encodeURIComponent("Play Gunner, a WWII themed HTML5 game where you destroy waves of enemy planes and ships")
+    if @game.gameType is 'Time Attack'
+      text = encodeURIComponent("I beat the #{@GAME_LENGTH_TEXT[@game.lengthMultplier]} #{@game.gameType} mode of Gunner in #{@timeDisplay(@gameTimer.ms)}. Try beating my time!")
+    else
+      text = encodeURIComponent("I destroyed #{@kills} enemies in the #{@GAME_LENGTH_TEXT[@game.lengthMultplier]} #{@game.gameType} mode of Gunner before dying. Try beating my score!")
 
-    twitter.inputEnabled = true
-    twitter.events.onInputDown.add( ->
-      win = window.open("https://twitter.com/intent/tweet?url=#{twitterUrl}&text=#{twitterText}", '_blank')
-      win.focus()
-    , this)
+    fullUrl = "https://twitter.com/intent/tweet?url=#{url}&text=#{text}"
+    @addIcon 200, 413, 'twitter', fullUrl
+    fullUrl ="https://www.facebook.com/dialog/share?app_id=488047311326879&href=#{url}&display=page&redirect_uri=https://facebook.com"
+    @addIcon 300, 413, 'facebook', fullUrl
+    fullUrl = "http://www.tumblr.com/share/link?url=#{url}&name=Gunner&description=#{text}"
+    @addIcon 400, 413, 'tumblr', fullUrl
+    fullUrl = "http://www.pinterest.com/pin/create/button/?url=#{url}&media=#{ogUrl}&description=#{text}"
+    @addIcon 500, 413, 'pinterest', fullUrl
+    fullUrl = "https://plus.google.com/share?url=#{url}"
+    @addIcon 600, 413, 'gplus', fullUrl
 
     if @game.gameType is 'Time Attack'
       if win
@@ -1575,6 +1606,15 @@ class Game
             { font: '18px sans-serif', fill: '#fff' }
           ).anchor.setTo(0.5, 0.5)
 
+  addIcon: (x, y, filename, url) ->
+    icon = @add.sprite(x, y, 'assets', filename)
+    icon.anchor.setTo(0.5, 0.5)
+    icon.inputEnabled = true
+    icon.events.onInputDown.add( ->
+      win = window.open(url, '_blank')
+      win.focus()
+    , this)
+    @shareImages.push icon
 
   restartGame: ->
     @destroyResources()
@@ -1617,6 +1657,7 @@ class Game
     @energyText.destroy()
     @killText.destroy()
     @enemyLvlUpText.destroy()
+    image.destroy() for image in @shareImages
     @gameEnd = false
 
 game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-container')
