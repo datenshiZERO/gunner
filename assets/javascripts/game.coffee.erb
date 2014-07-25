@@ -58,7 +58,7 @@ class Preloader
 
     @load.atlas('assets', '<%= image_path('atlas.png') %>', '<%= image_path('atlas.json') %>')
     @load.image('sea', '<%= image_path('sea.png') %>')
-
+    @load.bitmapFont('SpElite', '<%= font_path('SpElite.png') %>', '<%= font_path('SpElite.xml') %>')
     @load.audio('fire', ['<%= audio_path("fire.ogg") %>', '<%= audio_path("fire.mp3") %>'])
     @load.audio('burst', ['<%= audio_path("burst.ogg") %>', '<%= audio_path("burst.mp3") %>'])
     @load.audio('bomb', ['<%= audio_path("bomb.ogg") %>', '<%= audio_path("bomb.mp3") %>'])
@@ -640,6 +640,10 @@ class Game
     @setupText()
 
     @levelUpEnemy(0)
+    @time.advancedTiming = true
+
+    @versionText = @add.bitmapText(10, 480, 'SpElite', 'v0.4', 14)
+    @fpsText = @add.bitmapText(10, 498, 'SpElite', 'fps', 14)
 
     return
 
@@ -665,6 +669,8 @@ class Game
         @timeText.text = @timeDisplay(@gameTimer.ms)
       else
         @timeText.text = @timeDisplay(@drainCounter.duration)
+
+    @fpsText.text = "#{@time.fps} fps"
 
     if @delayedAction?
       if @delayedAction is 'restart'
@@ -750,6 +756,17 @@ class Game
     @damageSFX = @add.audio('damage')
 
   setupDeck: ->
+    @turrets = {}
+    @leftTurrets = {}
+    @rightTurrets = {}
+    for i in @BULLET_TYPES
+      @turrets[i] = @add.sprite(400, 525, 'assets', 'turret-' + i)
+      @turrets[i].anchor.setTo(0.3, 0.5)
+      @leftTurrets[i] = @add.sprite(300, 525, 'assets', 'turret-' + i)
+      @leftTurrets[i].anchor.setTo(0.3, 0.5)
+      @rightTurrets[i] = @add.sprite(500, 525, 'assets', 'turret-' + i)
+      @rightTurrets[i].anchor.setTo(0.3, 0.5)
+
     @deck = @add.sprite(0, 520, 'assets', 'deck')
 
     @barHeight = if @game.gameType is 'Time Attack' then 30 else 40
@@ -770,9 +787,12 @@ class Game
     @killFill.anchor.setTo 0, 0.5
     @killFill.scale.setTo 0, 1
 
-    @turrets = {}
-    @leftTurrets = {}
-    @rightTurrets = {}
+    @rewardTexts = []
+    for i in [1..30]
+      reward = @add.text(0, 0, ' ', { font: '14px Special Elite', fill: '#fff' })
+      reward.anchor.setTo 0.5, 0.5
+      @rewardTexts.push reward
+
     @bbtn = {}
     @bbtnd = {}
     # toggle bullet types
@@ -810,36 +830,61 @@ class Game
       )(@bbtn[i], @bbtnd[i], i, this)
 
 
-    for i in @BULLET_TYPES
-      @turrets[i] = @add.sprite(400, 525, 'assets', 'turret-' + i)
-      @turrets[i].anchor.setTo(0.3, 0.5)
-      @leftTurrets[i] = @add.sprite(300, 525, 'assets', 'turret-' + i)
-      @leftTurrets[i].anchor.setTo(0.3, 0.5)
-      @rightTurrets[i] = @add.sprite(500, 525, 'assets', 'turret-' + i)
-      @rightTurrets[i].anchor.setTo(0.3, 0.5)
-
-    @soundIcon = @add.sprite(360, 560, 'assets', 'sound-0')
+    @soundIcon = @add.sprite(360, 565, 'assets', 'sound-0')
     @soundIcon.anchor.setTo(0.5, 0.5)
     @soundIcon.animations.add('on', ['sound-0'])
     @soundIcon.animations.add('off', ['sound-1'])
-    @soundIcon.play('on')
+    @soundIcon.animations.add('low', ['sound-low'])
+    @soundIcon.animations.add('medium', ['sound-medium'])
+    if @sound.mute
+      @soundIcon.play('off')
+    else
+      if @sound.volume == 1
+        @soundIcon.play('on')
+      else if @sound.volume >= 0.66
+        @soundIcon.play('medium')
+      else
+        @soundIcon.play('low')
     @soundIcon.inputEnabled = true
     @soundIcon.events.onInputDown.add( ->
       if @sound.mute
         @sound.mute = false
+        @sound.volume = 0.33
+        @soundIcon.play('low')
+      else if @sound.volume <= 0.34
+        @sound.volume = 0.66
+        @soundIcon.play('medium')
+      else if @sound.volume <= 0.67
+        @sound.volume = 1
         @soundIcon.play('on')
       else
         @sound.mute = true
         @soundIcon.play('off')
     , this)
 
-    @optionsIcon = @add.sprite(440, 560, 'assets', 'options')
+    @optionsIcon = @add.sprite(440, 565, 'assets', 'options')
     @optionsIcon.anchor.setTo(0.5, 0.5)
     @optionsIcon.inputEnabled = true
     @optionsIcon.events.onInputDown.add( ->
       unless @game.paused
         @pauseGame()
     , this)
+
+    <%#@fullscreenIcon = @add.sprite(460, 565, 'assets', 'expand')%>
+    <%#@fullscreenIcon.anchor.setTo(0.5, 0.5)%>
+    <%#@fullscreenIcon.animations.add('expand', ['expand'])%>
+    <%#@fullscreenIcon.animations.add('compress', ['compress'])%>
+    <%#@fullscreenIcon.inputEnabled = true%>
+    <%#@fullscreenIcon.events.onInputDown.add( ->%>
+      <%#if @scale.isFullScreen%>
+        <%#@fullscreenIcon.play('expand')%>
+        <%#@scale.stopFullScreen()%>
+      <%#else%>
+        <%#@fullscreenIcon.play('compress')%>
+        <%#@scale.startFullScreen()%>
+    <%#, this)%>
+    <%#@scale.fullScreenScaleMode = Phaser.ScaleManager.SHOW_ALL%>
+
 
   setupText: ->
     if @game.gameType is 'Time Attack'
@@ -852,12 +897,11 @@ class Game
     @timeText.anchor.setTo(0.5, 0.5)
 
 
-    @energyText = @add.text(165, @barHeight + 1, 'Energy: ' + @energy, { font: '14px Special Elite', fill: '#fff',  })
-    @energyText.anchor.setTo(0.5, 0.5)
+    @energyText = @add.bitmapText(55, @barHeight - 9, 'SpElite', 'Energy: ' + @energy, 14)
     @adjustEnergyBar()
 
-    @killText = @add.text(635, @barHeight + 1, "Kills: 0", { font: '14px Special Elite', fill: '#fff' })
-    @killText.anchor.setTo(0.5, 0.5)
+    @killText = @add.bitmapText(530, @barHeight - 9, 'SpElite', "Kills: 0", 14)
+    @killText.align = 'center'
 
     @enemyLvlUpText = @add.text(400, 250, "", { font: '20px Special Elite', fill: '#fff' })
     @enemyLvlUpText.anchor.setTo(0.5, 0.5)
@@ -1094,7 +1138,7 @@ class Game
 
   spawnRookies: ->
     enemy = @enemies[0].getFirstExists(false)
-    if Math.random() < 0.3
+    if Math.random() < 0.2
       enemy.reset(0, @rnd.integerInRange(20, 480))
       enemy.body.velocity.x = @rnd.integerInRange(10, 40)
       enemy.rotation = -Math.PI / 2
@@ -1109,7 +1153,7 @@ class Game
     start = @rnd.integerInRange(20, 500)
     end = @rnd.integerInRange(20, 500)
     velocity = @rnd.integerInRange(60, 90)
-    if Math.random() < 0.3
+    if Math.random() < 0.2
       enemy.reset(0, start)
       enemy.rotation = @physics.arcade.moveToXY(
         enemy, 800, end, velocity * 0.5
@@ -1185,7 +1229,7 @@ class Game
     else
       enemy.reset(845, y)
       enemy.rotation = Math.PI / 2
-      enemy.body.velocity.x = -(10 + Math.random() * 10)
+      enemy.body.velocity.x = -(5 + Math.random() * 10)
 
     enemy.body.setSize(174, 32, 0, 0)
     enemy.play('cruise')
@@ -1225,17 +1269,21 @@ class Game
       enemy.kill()
       explosion.play('explosion', 15, false, true)
 
-      reward = @add.text(enemy.x, enemy.y, "#{@REWARD[enemy.name]}", { font: '16px Special Elite', fill: '#fff' })
-      reward.anchor.setTo(0.5, 0.5)
-      rise = @add.tween(reward)
-      rise.to({ y: enemy.y - 16 }, 250)
-      fade = @add.tween(reward)
-      fade.to({ y: enemy.y - 64, alpha: 0 })
-      rise.chain(fade)
-      fade.onComplete.add(->
-        @destroy()
-      , reward)
-      rise.start()
+      for reward in @rewardTexts when reward.text is ' '
+        reward.x = enemy.x
+        reward.y = enemy.y
+        reward.text = @REWARD[enemy.name]
+        reward.alpha = 1
+        rise = @add.tween(reward)
+        rise.to({ y: enemy.y - 16 }, 250)
+        fade = @add.tween(reward)
+        fade.to({ y: enemy.y - 64, alpha: 0 })
+        rise.chain(fade)
+        fade.onComplete.add(->
+          @text = ' '
+        , reward)
+        rise.start()
+        break
       @energy += @REWARD[enemy.name]
       @adjustEnergyBar()
       @kills++
