@@ -12,6 +12,12 @@ class App < Sinatra::Base
   register Sinatra::AssetPipeline
 
   get '/' do
+    @cocoon = false
+    haml :index
+  end
+
+  get '/cocoon' do
+    @cocoon = true
     haml :index
   end
 end

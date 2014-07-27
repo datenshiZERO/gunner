@@ -1,8 +1,11 @@
+
 class Boot
   constructor: (game) ->
   preload: ->
+    if navigator.isCocoonJS
+      cocoonjsphaser.utils.fixDOMParser()
     @load.image('preloaderBar', '<%= image_path('preloader_bar.png') %>')
-    @load.bitmapFont('SpecialElite32', '<%= font_path('SpecialElite32.png') %>', '<%= font_path('SpecialElite32.xml') %>')
+    @load.bitmapFont('SpecialElite32', '<%= font_path('SpecialElite32.png') %>', (if navigator.isCocoonJS then '<%= font_path('SpecialElite32.json') %>' else '<%= font_path('SpecialElite32.xml') %>'))
   create: ->
     @input.maxPointers = 2
     @stage.disableVisibilityChange = false

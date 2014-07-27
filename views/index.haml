@@ -1,43 +1,42 @@
 !!!
 %html{:lang => "en"}
   %head
-    %meta{:charset => "utf-8"}/
-    %meta{:content => "IE=Edge,chrome=1", "http-equiv" => "X-UA-Compatible"}/
-    %meta{:content => "width=device-width, initial-scale=1.0", :name => "viewport"}/
-    %title Gunner
-    %meta{:content => "Destroy waves of enemies in this HTML5 game", :name => "description"}/
-    %meta{:content => "Gunner", :property => "og:title"}/
-    %meta{:content => "Destroy waves of enemies in this HTML5 game", :property => "og:description"}/
-    %meta{:content => "website", :property => "og:type"}/
-    %meta{:content => "http://datenshizero.github.io/gunner/", :property => "og:url"}/
-    %meta{:content => image_path("opengraph.png"), :property => "og:image"}/
-    %meta{:content => "200", :property => "og:image:width"}/
-    %meta{:content => "200", :property => "og:image:height"}/
-    %link{:href => "./favicon.ico", :rel => "shortcut icon"}/
-    :css
-      body { margin: 0; background-color: #222 }
-      #orientation { display: none; }
-
-    /[if lt IE 9]
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
-  %body
-    #orientation This game works best when rotated to landscape mode
+    - unless @cocoon
+      %meta{:charset => "utf-8"}/
+      %meta{:content => "IE=Edge,chrome=1", "http-equiv" => "X-UA-Compatible"}/
+      %meta{:content => "width=device-width, initial-scale=1.0", :name => "viewport"}/
+      %title Gunner
+      %meta{:content => "Destroy waves of enemies in this HTML5 game", :name => "description"}/
+      %meta{:content => "Gunner", :property => "og:title"}/
+      %meta{:content => "Destroy waves of enemies in this HTML5 game", :property => "og:description"}/
+      %meta{:content => "website", :property => "og:type"}/
+      %meta{:content => "http://datenshizero.github.io/gunner/", :property => "og:url"}/
+      %meta{:content => image_path("opengraph.png"), :property => "og:image"}/
+      %meta{:content => "200", :property => "og:image:width"}/
+      %meta{:content => "200", :property => "og:image:height"}/
+      %link{:href => "./favicon.ico", :rel => "shortcut icon"}/
+      :css
+        body { margin: 0; background-color: #222 }
+        #orientation { display: none; }
     %script{:type => "text/javascript", :src => javascript_path("app")}
-    - if ENV['RACK_ENV'] == 'production'
-      / Piwik
-      :javascript
-        var _paq = _paq || [];
-        _paq.push(['trackPageView']);
-        _paq.push(['enableLinkTracking']);
-        (function() {
-          var u=(("https:" == document.location.protocol) ? "https" : "http") + "://analytics.bryanbibat.net/";
-          _paq.push(['setTrackerUrl', u+'piwik.php']);
-          _paq.push(['setSiteId', 12]);
-          var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript';
-          g.defer=true; g.async=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
-        })();
-      %noscript
-        %p
-          %img{:alt => "", :src => "http://analytics.bryanbibat.net/piwik.php?idsite=12", :style => "border:0;"}/
-      / End Piwik Code
+  %body
+    - unless @cocoon
+      #orientation This game works best when rotated to landscape mode
+      - if ENV['RACK_ENV'] == 'production'
+        / Piwik
+        :javascript
+          var _paq = _paq || [];
+          _paq.push(['trackPageView']);
+          _paq.push(['enableLinkTracking']);
+          (function() {
+            var u=(("https:" == document.location.protocol) ? "https" : "http") + "://analytics.bryanbibat.net/";
+            _paq.push(['setTrackerUrl', u+'piwik.php']);
+            _paq.push(['setSiteId', 12]);
+            var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript';
+            g.defer=true; g.async=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+          })();
+        %noscript
+          %p
+            %img{:alt => "", :src => "http://analytics.bryanbibat.net/piwik.php?idsite=12", :style => "border:0;"}/
+        / End Piwik Code
 

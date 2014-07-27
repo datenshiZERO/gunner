@@ -1,3 +1,4 @@
+//= require 'cocoon'
 //= require 'phaser'
 //= require 'persist'
 //= require 'gunner'

@@ -10,9 +10,9 @@ class Preloader
 
     @load.image('sea', '<%= image_path('sea.png') %>')
 
-    @load.bitmapFont('SpecialEliteOutline14', '<%= font_path('SpecialEliteOutline14.png') %>', '<%= font_path('SpecialEliteOutline14.xml') %>')
-    @load.bitmapFont('Airborne', '<%= font_path('Airborne.png') %>', '<%= font_path('Airborne.xml') %>')
-    @load.bitmapFont('AirborneGray', '<%= font_path('AirborneGray.png') %>', '<%= font_path('AirborneGray.xml') %>')
+    @load.bitmapFont('SpecialEliteOutline14', '<%= font_path('SpecialEliteOutline14.png') %>', (if navigator.isCocoonJS then '<%= font_path('SpecialEliteOutline14.json') %>' else '<%= font_path('SpecialEliteOutline14.xml') %>'))
+    @load.bitmapFont('Airborne', '<%= font_path('Airborne.png') %>', (if navigator.isCocoonJS then '<%= font_path('Airborne.json') %>' else '<%= font_path('Airborne.xml') %>'))
+    @load.bitmapFont('AirborneGray', '<%= font_path('AirborneGray.png') %>', (if navigator.isCocoonJS then '<%= font_path('AirborneGray.json') %>' else '<%= font_path('AirborneGray.xml') %>'))
 
     @load.audio('fire', ['<%= audio_path("fire.ogg") %>', '<%= audio_path("fire.mp3") %>'])
     @load.audio('burst', ['<%= audio_path("burst.ogg") %>', '<%= audio_path("burst.mp3") %>'])
