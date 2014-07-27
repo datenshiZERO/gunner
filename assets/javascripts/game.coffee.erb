@@ -256,7 +256,21 @@ class Game
         , this)
       )(@bbtn[i], @bbtnd[i], i, this)
 
-
+    volume = Store.get('volume')
+    if volume?
+      if volume is '0'
+        @sound.mute = true
+      else
+        @sound.mute = false
+        switch volume
+          when '1'
+            @sound.volume = 0.33
+          when '2'
+            @sound.volume = 0.66
+          when '3'
+            @sound.volume = 1
+    else
+      @sound.volume = 0.66
     @soundIcon = @add.sprite(360, 565, 'assets', 'sound-0')
     @soundIcon.anchor.setTo(0.5, 0.5)
     @soundIcon.animations.add('on', ['sound-0'])
@@ -278,15 +292,19 @@ class Game
         @sound.mute = false
         @sound.volume = 0.33
         @soundIcon.play('low')
+        Store.set('volume', 1)
       else if @sound.volume <= 0.34
         @sound.volume = 0.66
         @soundIcon.play('medium')
+        Store.set('volume', 2)
       else if @sound.volume <= 0.67
         @sound.volume = 1
         @soundIcon.play('on')
+        Store.set('volume', 3)
       else
         @sound.mute = true
         @soundIcon.play('off')
+        Store.set('volume', 0)
     , this)
 
     @optionsIcon = @add.sprite(440, 565, 'assets', 'options')
@@ -297,6 +315,7 @@ class Game
         @pauseGame()
     , this)
 
+    <%#Disable FullScreen - buggy in 2.0.7%>
     <%#@fullscreenIcon = @add.sprite(460, 565, 'assets', 'expand')%>
     <%#@fullscreenIcon.anchor.setTo(0.5, 0.5)%>
     <%#@fullscreenIcon.animations.add('expand', ['expand'])%>
