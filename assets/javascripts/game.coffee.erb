@@ -85,7 +85,7 @@ class Game
     @checkEnemyLevelUp()
 
     @toggleBullets()
-    @fire() if (@input.activePointer.isDown and @input.activePointer.worldY < 520) or @input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)
+    @fire() if (@input.activePointer.isDown and @input.activePointer.worldY < 515) or @input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)
 
     @checkCollision()
 
@@ -444,6 +444,7 @@ class Game
 
       if @selectedFire is 'single' or @selectedFire is 'triple'
         @turrets[@selectedBullet].revive()
+        @rotateCenterTurret()
       if @selectedFire is 'triple'
         @leftTurrets[@selectedBullet].revive()
         @rightTurrets[@selectedBullet].revive()
@@ -454,7 +455,7 @@ class Game
 
     @crosshair.body.velocity.x = 0
     @crosshair.body.velocity.y = 0
-    if @input.activePointer.withinGame and @input.activePointer.worldY < 520
+    if @input.activePointer.withinGame and @input.activePointer.worldY < 515
       @crosshair.x = @input.activePointer.worldX
       @crosshair.y = @input.activePointer.worldY
     else
@@ -468,15 +469,19 @@ class Game
       else if @cursors.down.isDown
         @crosshair.body.velocity.y = @crosshair.speed
 
-    if (@input.activePointer.withinGame and @input.activePointer.worldY < 520) or
+    if (@input.activePointer.withinGame and @input.activePointer.worldY < 515) or
         (key for key, status of @cursors when status.isDown).length > 0
-      turretAngle = @physics.arcade.angleBetween(
-        @turrets[@selectedBullet], @crosshair)
-      @turrets[@selectedBullet].rotation =
-        turretAngle unless 0 < turretAngle < Math.PI
+      if @selectedFire is 'single' or @selectedFire is 'triple'
+        @rotateCenterTurret()
 
       if @selectedFire is 'triple'
         @rotateSideTurrets()
+
+  rotateCenterTurret: ->
+    turretAngle = @physics.arcade.angleBetween(
+      @turrets[@selectedBullet], @crosshair)
+    @turrets[@selectedBullet].rotation =
+      turretAngle unless 0 < turretAngle < Math.PI
 
   rotateSideTurrets: ->
     turretAngle = @physics.arcade.angleBetween(
@@ -939,60 +944,38 @@ class Game
 
     @createPopupOverlay()
 
-    congrats = @add.bitmapText(400, 150, 'Airborne', (if win then "YOU WIN" else "GAME OVER"), 72)
+    congrats = @add.bitmapText(400, 150, 'Airborne', (if win then "YOU WIN!" else "GAME OVER!"), 72)
     Gunner.center congrats
-    #@add.text(400, 225, "New Best Time!",
-    #  { font: '28px Army Wide', fill: '#fff' }
-    #).anchor.setTo(0.5, 0.5)
-    <%#@add.text(400, 225, "You beat the game in",%>
-      <%#{ font: '22px Army Wide', fill: '#fff' }%>
-    <%#).anchor.setTo(0.5, 0.5)%>
-    <%#@add.text(400, 260, Gunner.timeDisplay(@gameTimer.ms),%>
-      <%#{ font: '32px Army Wide', fill: '#fff' }%>
-    <%#).anchor.setTo(0.5, 0.5)%>
-    <%#@timeText.text = ""%>
 
-    <%#@add.text(400, 290, "(previous record: #{Gunner.timeDisplay(@gameTimer.ms)})",%>
-      <%#{ font: '18px sans-serif', fill: '#fff' }%>
-    <%#).anchor.setTo(0.5, 0.5)%>
-#2F3942
-    bmd = @add.bitmapData(10, 10)
-    bmds = @add.sprite(0, 0, bmd)
+    bmd = @add.bitmapData(176, 36)
+    bmd.context.fillStyle = "#2F3942"
+    bmd.context.fillRect 0, 0, 176, 36
+    bmds = @add.sprite(182, 309, bmd)
+    bmds.inputEnabled = true
+    bmds.events.onInputDown.add( ->
+      @restartGame()
+    , this)
 
-    playAgain = @add.bitmapText(530, 330, 'Airborne', 'Play Again', 28)
+    bmd = @add.bitmapData(170, 36)
+    bmd.context.fillStyle = "#2F3942"
+    bmd.context.fillRect 0, 0, 170, 36
+    bmds = @add.sprite(445, 309, bmd)
+    bmds.inputEnabled = true
+    bmds.events.onInputDown.add( ->
+      @quitGame()
+    , this)
+
+    playAgain = @add.bitmapText(270, 330, 'Airborne', 'Play Again', 28)
     Gunner.center(playAgain)
     playAgain.inputEnabled = true
     playAgain.events.onInputDown.add( ->
       @restartGame()
     , this)
 
-    bmds.x = playAgain.x - 5
-    bmds.y = playAgain.y - 5
-    bmd.resize(playAgain.textWidth + 10, playAgain.textHeight + 3)
-    bmd.context.fillStyle = "#2F3942"
-    bmd.context.fillRect 0, 0, playAgain.textWidth + 10, playAgain.textHeight + 3
-    bmds.inputEnabled = true
-    bmds.events.onInputDown.add( ->
-      @restartGame()
-    , this)
-
-    bmd = @add.bitmapData(10, 10)
-    bmds = @add.sprite(0, 0, bmd)
-
-    mainMenu = @add.bitmapText(270, 330, 'Airborne', 'Main Menu', 28)
+    mainMenu = @add.bitmapText(530, 330, 'Airborne', 'Main Menu', 28)
     Gunner.center(mainMenu)
     mainMenu.inputEnabled = true
     mainMenu.events.onInputDown.add( ->
-      @quitGame()
-    , this)
-
-    bmds.x = mainMenu.x - 5
-    bmds.y = mainMenu.y - 5
-    bmd.resize(mainMenu.textWidth + 10, mainMenu.textHeight + 3)
-    bmd.context.fillStyle = "#2F3942"
-    bmd.context.fillRect 0, 0, mainMenu.textWidth + 10, mainMenu.textHeight + 3
-    bmds.inputEnabled = true
-    bmds.events.onInputDown.add( ->
       @quitGame()
     , this)
 
