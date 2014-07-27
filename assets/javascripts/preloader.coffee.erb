@@ -1,0 +1,27 @@
+class Preloader
+  constructor: (game) ->
+  preload: ->
+    @preloaderBar = @add.sprite(400, 300, 'preloaderBar')
+    @preloaderBar.anchor.setTo(0.5, 0.5)
+    window.Gunner.horizontalCenter(@add.bitmapText(400, 245, 'SpecialElite32', 'Loading...', 32))
+    @load.setPreloadSprite(@preloaderBar)
+
+    @load.atlas('assets', '<%= image_path('atlas.png') %>', '<%= image_path('atlas.json') %>')
+
+    @load.image('sea', '<%= image_path('sea.png') %>')
+
+    @load.bitmapFont('SpecialEliteOutline14', '<%= font_path('SpecialEliteOutline14.png') %>', '<%= font_path('SpecialEliteOutline14.xml') %>')
+    @load.bitmapFont('Airborne', '<%= font_path('Airborne.png') %>', '<%= font_path('Airborne.xml') %>')
+    @load.bitmapFont('AirborneGray', '<%= font_path('AirborneGray.png') %>', '<%= font_path('AirborneGray.xml') %>')
+
+    @load.audio('fire', ['<%= audio_path("fire.ogg") %>', '<%= audio_path("fire.mp3") %>'])
+    @load.audio('burst', ['<%= audio_path("burst.ogg") %>', '<%= audio_path("burst.mp3") %>'])
+    @load.audio('bomb', ['<%= audio_path("bomb.ogg") %>', '<%= audio_path("bomb.mp3") %>'])
+    @load.audio('explosion', ['<%= audio_path("explosion.ogg") %>', '<%= audio_path("explosion.mp3") %>'])
+    @load.audio('explosion2', ['<%= audio_path("explosion2.ogg") %>', '<%= audio_path("explosion2.mp3") %>'])
+    @load.audio('damage', ['<%= audio_path("damage.ogg") %>', '<%= audio_path("damage.mp3") %>'])
+
+  create: ->
+    @state.start('MainMenu')
+
+window.Gunner.Preloader = Preloader
