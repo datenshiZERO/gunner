@@ -14,7 +14,9 @@
     %meta{:content => "200", :property => "og:image:width"}/
     %meta{:content => "200", :property => "og:image:height"}/
     %link{:href => "./favicon.ico", :rel => "shortcut icon"}/
-    %link{:rel => "stylesheet", :href => stylesheet_path('app') } 
+    :css
+      body { margin: 0; background-color: #222 }
+      #orientation { display: none; }
 
     /[if lt IE 9]
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>

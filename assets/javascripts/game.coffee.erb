@@ -39,8 +39,8 @@ class Game
       @drainCounter.loop(60000, ->
         @energy -= @calcDrain()
         @adjustEnergyBar()
-        penalty = @add.text(165, @barHeight, "-#{@calcDrain()}", { font: '24px Special Elite', fill: '#fff' })
-        penalty.anchor.setTo(0.5, 0.5)
+        penalty = @add.bitmapText(165, @barHeight, 'SpecialElite32', "-#{@calcDrain()}", 24)
+        Gunner.center(penalty)
         rise = @add.tween(penalty)
         rise.to({ y: @barHeight + 50 })
         fade = @add.tween(penalty)
@@ -52,6 +52,7 @@ class Game
         rise.start()
         @drain++
         @drainText.text = "-#{@calcDrain()} energy in:"
+        Gunner.center(@drainText)
       , this)
       @drainCounter.start()
     @setupEnemies()
@@ -103,6 +104,7 @@ class Game
       else
         @timeText.text = Gunner.timeDisplay(@drainCounter.duration)
 
+    Gunner.center(@timeText)
     @fpsText.text = "#{@time.fps} fps"
 
     if @delayedAction?
@@ -215,8 +217,7 @@ class Game
 
     @rewardTexts = []
     for i in [1..30]
-      reward = @add.text(0, 0, ' ', { font: '14px Special Elite', fill: '#fff' })
-      reward.anchor.setTo 0.5, 0.5
+      reward = @add.bitmapText(0, 0, 'SpecialElite32', ' ', 14)
       @rewardTexts.push reward
 
     @bbtn = {}
@@ -313,14 +314,13 @@ class Game
 
 
   setupText: ->
-    @timeText = @add.text(400, 30, '', { font: '28px monospace', fill: '#fff' })
+    @timeText = @add.bitmapText(400, 30, 'SpecialElite32', '', 28)
     unless @game.gameType is 'Time Attack'
       @timeText.y = 50
-      @drainText = @add.text(400, 20, "-#{@calcDrain()} energy in:", { font: '14px Special Elite', fill: '#fff',  })
-      @drainText.anchor.setTo(0.5, 0.5)
+      @drainText = @add.bitmapText 400, 20, 'SpecialEliteOutline14', "-#{@calcDrain()} energy in:", 14
+      Gunner.center(@drainText)
 
-    @timeText.anchor.setTo(0.5, 0.5)
-
+    Gunner.center(@timeText)
 
     @energyText = @add.bitmapText(165, @barHeight - 9, 'SpecialEliteOutline14', 'Energy: ' + @energy, 14)
     @adjustEnergyBar()
@@ -369,13 +369,15 @@ class Game
     @energyFills[3].scale.setTo(256, 1)
   
   adjustKillBar: ->
-    if @nextEnemyLvlUp is null and @kills >= @endScore
+    if @nextEnemyLvlUp is null and
+        ((@game.gameType is 'Time Attack' and @kills >= @endScore) or
+        @game.gameType is 'Survival')
       @killFill.scale.setTo(256, 1)
       if @game.gameType is 'Time Attack'
         @killText.text = "Max Kills Reached"
         @displayEnd(true)
       else
-        @killText.text = "Max Level Reached (#{@kills})"
+        @killText.text = "Max Level (#{@kills} kills)"
     else
       divisor = if @nextEnemyLvlUp? then @nextEnemyLvlUp else @endScore
       @killText.text = "Kills: #{@kills} / #{divisor}"
@@ -500,7 +502,7 @@ class Game
         rotate = @add.tween(bomb).to({ angle: 720 }, 2000)
         rotate.onComplete.add( ->
           t = @game.state.getCurrentState()
-          bullets = t.bullets[t.BULLET_TYPES.indexOf(@shot)]
+          bullets = t.bullets[Gunner.BULLET_TYPES.indexOf(@shot)]
           angle = Math.random() * 2 * Math.PI
           for i in [0..4]
             b = bullets.getFirstExists(false)
@@ -696,10 +698,13 @@ class Game
       explosion.play('explosion', 15, false, true)
 
       for reward in @rewardTexts when reward.text is ' '
-        reward.x = enemy.x
-        reward.y = enemy.y
+        reward.oldX = enemy.x
+        reward.oldY = enemy.y
+        reward.oldWidth = null
+        reward.oldHeight = null
         reward.text = Gunner.REWARD[enemy.name]
         reward.alpha = 1
+        Gunner.center(reward)
         rise = @add.tween(reward)
         rise.to({ y: enemy.y - 16 }, 250)
         fade = @add.tween(reward)
@@ -747,8 +752,8 @@ class Game
     else
       @endScore = Gunner.ENEMY_LVL_CHART[kills].end / @game.lengthMultplier
       if @game.gameType is 'Time Attack'
-        @endText = @add.text 400, 50, "Destroy an elite fighter or reach #{@endScore} kills to win", { font: '14px Army Wide', fill: '#fff' }
-        @endText.anchor.setTo(0.5, 0.5)
+        @endText = @add.bitmapText 400, 60, 'SpecialEliteOutline14', "Destroy an elite fighter or reach #{@endScore} kills to win", 14
+        Gunner.center(@endText)
 
   unlockEnemy: (enemyIdx, spawnRate, maxCount) ->
     @enemySpawners[enemyIdx] = @game.time.events.loop(spawnRate, @spawnEnemy, this, enemyIdx)
@@ -833,10 +838,8 @@ class Game
 
     @createPopupOverlay()
 
-    @pausedText = @add.text(400, 150, 'Game Paused',
-      { font: '64px Army Wide', fill: '#fff' }
-    )
-    @pausedText.anchor.setTo(0.5, 0.5)
+    @pausedText = @add.bitmapText 400, 150, 'Airborne', "Game Paused", 64
+    Gunner.center(@pausedText)
 
     @typeHeaderText = @add.text(400, 220, "Game Type:",
       { font: '18px sans-serif', fill: '#fff' }
@@ -859,27 +862,32 @@ class Game
     else
       highScore = Store.get("survival-#{@game.lengthMultplier}")
       @previousRecordText.text = "(previous record: #{highScore} kills)" if highScore?
-    @unpauseText = @add.text(400, 440, "Click/tap outside this box to resume game",
-      { font: '18px Army Wide', fill: '#fff' }
-    )
-    @unpauseText.anchor.setTo(0.5, 0.5)
-    @playAgain = @add.text(400, 350, "Restart Game",
-      { font: '24px Army Wide', fill: '#fff' }
-    )
-    @playAgain.anchor.setTo(0.5, 0.5)
+    @unpauseText = @add.bitmapText 400, 440, 'Airborne', 'Click or tap outside this box to resume game', 18
+    Gunner.center @unpauseText
 
-    @mainMenu = @add.text(400, 390, "Back to Main Menu",
-      { font: '24px Army Wide', fill: '#fff' }
-    )
-    @mainMenu.anchor.setTo(0.5, 0.5)
+    bmd = @add.bitmapData(200, 34)
+    bmd.context.fillStyle = "#2F3942"
+    bmd.context.fillRect 0, 0, 200, 34
+    @playAgainBox = @add.sprite(150, 350, bmd)
+
+    @playAgain = @add.bitmapText(250, 370, 'Airborne', 'Restart Game', 24)
+    Gunner.center @playAgain
+
+    bmd = @add.bitmapData(255, 34)
+    bmd.context.fillStyle = "#2F3942"
+    bmd.context.fillRect 0, 0, 255, 34
+    @mainMenuBox = @add.sprite(392, 350, bmd)
+
+    @mainMenu = @add.bitmapText(520, 370, 'Airborne', 'Back to Main Menu', 24)
+    Gunner.center @mainMenu
 
     @input.onDown.add( (e) ->
       return unless @game.paused
       if e.x > 100 and e.x < 700 and e.y > 70 and e.y < 470
-        if e.x > 290 and e.x < 510 and e.y > 340 and e.y < 370
+        if e.x > 150 and e.x < 350 and e.y > 350 and e.y < 390
           @delayedAction = 'restart'
           @resumeGame()
-        if e.x > 250 and e.x < 550 and e.y > 370 and e.y < 400
+        if e.x > 392 and e.x < 647 and e.y > 350 and e.y < 390
           @delayedAction = 'quit'
           @resumeGame()
       else
@@ -893,7 +901,9 @@ class Game
     @gameTypeText.destroy()
     @unpauseText.destroy()
     @previousRecordText.destroy()
+    @playAgainBox.destroy()
     @playAgain.destroy()
+    @mainMenuBox.destroy()
     @mainMenu.destroy()
     @game.paused = false
 
@@ -910,9 +920,8 @@ class Game
 
     @createPopupOverlay()
 
-    @add.text(400, 150, (if win then "YOU WIN" else "GAME OVER"),
-      { font: '72px Army Wide', fill: '#fff' }
-    ).anchor.setTo(0.5, 0.5)
+    congrats = @add.bitmapText(400, 150, 'Airborne', (if win then "YOU WIN" else "GAME OVER"), 72)
+    Gunner.center congrats
     #@add.text(400, 225, "New Best Time!",
     #  { font: '28px Army Wide', fill: '#fff' }
     #).anchor.setTo(0.5, 0.5)
@@ -927,22 +936,44 @@ class Game
     <%#@add.text(400, 290, "(previous record: #{Gunner.timeDisplay(@gameTimer.ms)})",%>
       <%#{ font: '18px sans-serif', fill: '#fff' }%>
     <%#).anchor.setTo(0.5, 0.5)%>
+#2F3942
+    bmd = @add.bitmapData(10, 10)
+    bmds = @add.sprite(0, 0, bmd)
 
-    playAgain = @add.text(530, 330, "Play Again",
-      { font: '28px Army Wide', fill: '#fff' }
-    )
-    playAgain.anchor.setTo(0.5, 0.5)
+    playAgain = @add.bitmapText(530, 330, 'Airborne', 'Play Again', 28)
+    Gunner.center(playAgain)
     playAgain.inputEnabled = true
     playAgain.events.onInputDown.add( ->
       @restartGame()
     , this)
 
-    mainMenu = @add.text(270, 330, "Main Menu",
-      { font: '28px Army Wide', fill: '#fff' }
-    )
-    mainMenu.anchor.setTo(0.5, 0.5)
+    bmds.x = playAgain.x - 5
+    bmds.y = playAgain.y - 5
+    bmd.resize(playAgain.textWidth + 10, playAgain.textHeight + 3)
+    bmd.context.fillStyle = "#2F3942"
+    bmd.context.fillRect 0, 0, playAgain.textWidth + 10, playAgain.textHeight + 3
+    bmds.inputEnabled = true
+    bmds.events.onInputDown.add( ->
+      @restartGame()
+    , this)
+
+    bmd = @add.bitmapData(10, 10)
+    bmds = @add.sprite(0, 0, bmd)
+
+    mainMenu = @add.bitmapText(270, 330, 'Airborne', 'Main Menu', 28)
+    Gunner.center(mainMenu)
     mainMenu.inputEnabled = true
     mainMenu.events.onInputDown.add( ->
+      @quitGame()
+    , this)
+
+    bmds.x = mainMenu.x - 5
+    bmds.y = mainMenu.y - 5
+    bmd.resize(mainMenu.textWidth + 10, mainMenu.textHeight + 3)
+    bmd.context.fillStyle = "#2F3942"
+    bmd.context.fillRect 0, 0, mainMenu.textWidth + 10, mainMenu.textHeight + 3
+    bmds.inputEnabled = true
+    bmds.events.onInputDown.add( ->
       @quitGame()
     , this)
 
@@ -969,36 +1000,28 @@ class Game
       if win
         bestTime = Store.get("bestTime-#{@game.lengthMultplier}")
         if !bestTime? or parseInt(bestTime) > @gameTimer.ms
-          @add.text(400, 225, "New Best Time!",
-            { font: '32px Army Wide', fill: '#fff' }
-          ).anchor.setTo(0.5, 0.5)
-          @add.text(400, 260, Gunner.timeDisplay(@gameTimer.ms),
-            { font: '32px Army Wide', fill: '#fff' }
-          ).anchor.setTo(0.5, 0.5)
+          text = @add.bitmapText(400, 225, 'Airborne', 'New Best Time!', 32)
+          Gunner.center(text)
+          text = @add.bitmapText(400, 260, 'SpecialElite32', Gunner.timeDisplay(@gameTimer.ms), 32)
+          Gunner.center(text)
           Store.set("bestTime-#{@game.lengthMultplier}", @gameTimer.ms)
       else
         bestTime = Store.get("bestTime-#{@game.lengthMultplier}")
         if bestTime?
-          @add.text(400, 270,
-            "(previous record: #{Gunner.timeDisplay(parseInt(bestTime))})",
-            { font: '18px sans-serif', fill: '#fff' }
-          ).anchor.setTo(0.5, 0.5)
+          text = @add.bitmapText(400, 240, 'SpecialElite32', "previous record: #{Gunner.timeDisplay(parseInt(bestTime))}", 24)
+          Gunner.center(text)
     else
       highScore = Store.get("survival-#{@game.lengthMultplier}")
       if !(highScore) or @kills > parseInt(highScore)
-        @add.text(400, 225, "New High Score!",
-          { font: '32px Army Wide', fill: '#fff' }
-        ).anchor.setTo(0.5, 0.5)
-        @add.text(400, 260, "#{@kills} kills",
-          { font: '32px Army Wide', fill: '#fff' }
-        ).anchor.setTo(0.5, 0.5)
+        text = @add.bitmapText(400, 225, 'Airborne', 'New High Score!', 32)
+        Gunner.center(text)
+        text = @add.bitmapText(400, 260, 'SpecialElite32', "#{@kills} kills", 32)
+        Gunner.center(text)
         Store.set("survival-#{@game.lengthMultplier}", @kills)
         
-      if highScore?
-          @add.text(400, 290,
-            "(previous record: #{highScore})",
-            { font: '18px sans-serif', fill: '#fff' }
-          ).anchor.setTo(0.5, 0.5)
+      else if highScore?
+        text = @add.bitmapText(400, 240, 'SpecialElite32', "previous record: #{highScore} kills", 24)
+        Gunner.center(text)
 
   addIcon: (x, y, filename, url) ->
     icon = @add.sprite(x, y, 'assets', filename)

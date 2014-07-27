@@ -190,7 +190,7 @@ window.Gunner = {
 
     bmpText.oldX = bmpText.x unless bmpText.oldX
 
-    if !bmpText.oldWidth? or bmpText.oldWidth isnt bmpText.textWidth
+    if !bmpText.oldWidth? or Math.abs(bmpText.oldWidth - bmpText.textWidth) > 8
       bmpText.oldWidth = bmpText.textWidth
       bmpText.x = bmpText.oldX - bmpText.textWidth / 2
 

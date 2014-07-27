@@ -4,12 +4,12 @@ class Boot
     @load.image('preloaderBar', '<%= image_path('preloader_bar.png') %>')
     @load.bitmapFont('SpecialElite32', '<%= font_path('SpecialElite32.png') %>', '<%= font_path('SpecialElite32.xml') %>')
   create: ->
-    @input.maxPointers = 1
+    @input.maxPointers = 2
     @stage.disableVisibilityChange = false
     if @game.device.desktop
       @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
       @scale.minWidth = 480
-      @scale.minHeight = 260
+      @scale.minHeight = 360
       @scale.maxWidth = 800
       @scale.maxHeight = 600
       @scale.pageAlignHorizontally = true
@@ -18,7 +18,7 @@ class Boot
     else
       @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
       @scale.minWidth = 480
-      @scale.minHeight = 260
+      @scale.minHeight = 360
       @scale.maxWidth = 800
       @scale.maxHeight = 600
       @scale.pageAlignHorizontally = true

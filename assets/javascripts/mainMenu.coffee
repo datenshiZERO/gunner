@@ -20,7 +20,7 @@ class MainMenu
     @setupTopLevel()
 
   addText: (text, x, y, selected, small) ->
-    bmd = @add.bitmapData(800, 600)
+    bmd = @add.bitmapData(1, 1)
     bmds = @add.sprite(0, 0, bmd)
     mt = @add.bitmapText(x, y, (if selected then 'Airborne' else 'AirborneGray'), text, (if small then 26 else 32))
     @menuTexts[text] = mt
@@ -38,7 +38,7 @@ class MainMenu
 
   addTypewriterText: (text, x, y, size, centerType, link) ->
     if link?
-      bmd = @add.bitmapData(800, 600)
+      bmd = @add.bitmapData(1, 1)
       bmds = @add.sprite(0, 0, bmd)
     mt = @add.bitmapText(x, y, 'SpecialElite32', text, size)
     mt.align = 'center'
@@ -241,19 +241,16 @@ class MainMenu
     @titleText.visible = false
     if @game.gameType is 'Time Attack'
       text = '  Time Attack  '
-      @addTutorialText "Reach #{15000 / @game.lengthMultplier} kills or destroy an", 400, 150, true
-      @addTutorialText "elite fighter as soon as possible.", 400, 190, true
+      @addTutorialText "Reach #{15000 / @game.lengthMultplier} kills or destroy an", 400, 155, true
+      @addTutorialText "Elite Fighter as soon as possible.", 400, 195, true
     else
       text = '  Survival  '
-      @addTutorialText "Destroy as many enemies as possible.", 400, 150, true
-      @addTutorialText "You will lose energy every minute.", 400, 190, true
+      @addTutorialText "Destroy as many enemies as possible.", 400, 155, true
+      @addTutorialText "You will lose energy every minute.", 400, 195, true
 
-    @menuTexts[text] = @add.text(400, 80, text,
-      {
-        font: "64px Special Elite",
-        fill: '#fff'
-      })
-    @menuTexts[text].anchor.setTo(0.5, 0.5)
+    @menuTexts[text] = @add.bitmapText(400, 90, 'Airborne', text, 80)
+    Gunner.center(@menuTexts[text])
+
     @addTutorialText "Click or tap screen to shoot. Different firing modes", 400, 260
     @addTutorialText "can be selected at the bottom by clicking/tapping.", 400, 285
 
@@ -319,12 +316,12 @@ class MainMenu
     @titleText.visible = false
     @addInstructionText 'Credits', 400, 50, true
 
-    @addCreditsText 'Copyright (c) 2014 Bryan Bibat.', 50, 110, "http://bryanbibat.net"
-    @addCreditsText 'Made with Phaser 2.0.7', 375, 110, "http://phaser.io"
+    @addCreditsText 'Copyright (c) 2014 Bryan Bibat.', 50, 100, "http://bryanbibat.net"
+    @addCreditsText 'Made with Phaser 2.0.7', 375, 100, "http://phaser.io"
     @addCreditsText 'Sprites (c) 2002 Ari Feldman,', 50, 135, "www.widgetworx.com/spritelib/"
     @addCreditsText 'Sounds (c) 2013 dklon (Devin Watson),', 350, 135, "http://opengameart.org/users/dklon"
-    @addCreditsText '"Airborne" font (c) 2005 Charles Casimiro Design,', 50, 160, "http://charlescasimiro.com/airborne.html"
-    @addCreditsText '"Special Elite" font (c) 2011 Astigmatic (Brian J. Bonislawsky)', 50, 185, "http://www.astigmatic.com/"
+    @addCreditsText '"Airborne" font (c) 2005 Charles Casimiro Design,', 50, 170, "http://charlescasimiro.com/airborne.html"
+    @addCreditsText '"Special Elite" font (c) 2011 Astigmatic (Brian J. Bonislawsky)', 50, 205, "http://www.astigmatic.com/"
 
 
     share = @addInstructionText 'Spread the word:', 210, 300, true
