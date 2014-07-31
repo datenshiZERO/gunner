@@ -4,7 +4,7 @@
     %meta{:charset => "utf-8"}/
     %meta{:content => "IE=Edge,chrome=1", "http-equiv" => "X-UA-Compatible"}/
     %meta{:content => "width=device-width, initial-scale=1.0", :name => "viewport"}/
-    %title Gunner
+    %title Gunner v0.21
     %meta{:content => "Shoot down endless waves of enemies", :name => "description"}/
     %meta{:content => "Gunner", :property => "og:title"}/
     %meta{:content => "Shoot down endless waves of enemies", :property => "og:description"}/
@@ -17,29 +17,7 @@
     /[if lt IE 9]
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
   %body
-    - if ENV['RACK_ENV'] == 'production'
-      #fb-root
-    .container.main-container
-      .row
-        .col-lg-12
-          %h1 Gunner
-          #game-container
-      .row
-        .col-lg-12
-          .footer
-            %p.copyright
-              Copyright &copy;2014
-              %a{:href => "http://bryanbibat.net"} Bryan Bibat
-            %p.powered
-              Made with <a href="http://phaser.io">Phaser</a> and
-              <a href="http://www.widgetworx.com/spritelib/">SpriteLib</a>.
-            - if false # ENV['RACK_ENV'] == 'production'
-              %p
-                .g-plusone{"data-size" => "medium"}
-                %a.twitter-share-button{"data-text" => "Play WDFAC, a DotA inspired game where battles are decided by Rock-Paper-Scissors!", href: "https://twitter.com/share"} Tweet
-                .fb-share-button{"data-type" => "button_count"}
-            %p 
-              %a{ href: "https://github.com/datenshiZERO/gunner" } Fork this on Github
+    #game-container
     %script{:type => "text/javascript", :src => javascript_path("app")}
     - if ENV['RACK_ENV'] == 'production'
       / Piwik
@@ -58,19 +36,3 @@
         %p
           %img{:alt => "", :src => "http://analytics.bryanbibat.net/piwik.php?idsite=12", :style => "border:0;"}/
       / End Piwik Code
-      :javascript
-        !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');
-      :javascript
-        (function() {
-          var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
-          po.src = 'https://apis.google.com/js/platform.js';
-          var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
-        })();
-      :javascript
-        (function(d, s, id) {
-          var js, fjs = d.getElementsByTagName(s)[0];
-          if (d.getElementById(id)) return;
-          js = d.createElement(s); js.id = id;
-          js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
-          fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
