@@ -4,9 +4,7 @@
     %meta{:charset => "utf-8"}/
     %meta{:content => "IE=Edge,chrome=1", "http-equiv" => "X-UA-Compatible"}/
     %meta{:content => "width=device-width, initial-scale=1.0", :name => "viewport"}/
-    %link{:href=>"//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css", :rel=>"stylesheet"}
-    %link{:href=>"//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css", :rel=>"stylesheet"}
-    %title WDFAC
+    %title Gunner v0.01
     %meta{:content => "Reverse Lane Defense with Rock-Paper-Scissors creeps", :name => "description"}/
     %meta{:content => "WDFAC", :property => "og:title"}/
     %meta{:content => "Reverse Lane Defense with Rock-Paper-Scissors creeps", :property => "og:description"}/
@@ -14,34 +12,16 @@
     %meta{:content => "https://datenshizero.github.io/wdfac", :property => "og:url"}/
     %meta{:content => image_path("opengraph.png"), :property => "og:image"}/
     %link{:href => "./favicon.ico", :rel => "shortcut icon"}/
-    %link{:rel => "stylesheet", :href => stylesheet_path('app') } 
+    :css
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { background-color: #222 }
+      #game-container canvas { margin: 0 auto; }
+
 
     /[if lt IE 9]
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
   %body
-    - if ENV['RACK_ENV'] == 'production'
-      #fb-root
-    .container.main-container
-      .row
-        .col-lg-12
-          #game-container
-      .row
-        .col-lg-12
-          .footer
-            %p.copyright
-              Copyright &copy;2014
-              %a{:href => "http://bryanbibat.net"} Bryan Bibat
-            %p.powered
-              Made with <a href="http://getbootstrap.com/">Bootstrap</a>, 
-              <a href="http://fortawesome.github.io/Font-Awesome/">Font Awesome</a> and a bunch of JS libraries.
-            - if ENV['RACK_ENV'] == 'production'
-              %p
-                .g-plusone{"data-size" => "medium"}
-                %a.twitter-share-button{"data-text" => "Play WDFAC, a DotA inspired game where battles are decided by Rock-Paper-Scissors!", href: "https://twitter.com/share"} Tweet
-                .fb-share-button{"data-type" => "button_count"}
-            %p 
-              %a{ href: "https://github.com/datenshiZERO/wdfac" } Fork this on Github
-    %script{:type => "text/javascript", :src => "//cdnjs.cloudflare.com/ajax/libs/phaser/2.0.4/phaser.min.js"}
+    #game-container
     %script{:type => "text/javascript", :src => javascript_path("app")}
     - if ENV['RACK_ENV'] == 'production'
       / Piwik

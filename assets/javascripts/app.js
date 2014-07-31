@@ -1,1 +1,2 @@
+//= require 'phaser'
 //= require 'game'
