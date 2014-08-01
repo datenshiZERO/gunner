@@ -65,20 +65,22 @@ class Preloader
     <% end %>
     <% [0, 1, 3].each do |x| %>
     @load.spritesheet('enemy<%= x %>', '<%= image_path("enemy#{x}.png") %>', 32, 32)
-    @load.spritesheet('reward<%= x %>', '<%= image_path("reward#{x}.png") %>', 32, 32, 10)
     <% end %>
     @load.spritesheet('enemy2', '<%= image_path("enemy2.png") %>', 32, 98)
-    @load.spritesheet('reward2', '<%= image_path("reward2.png") %>', 32, 32, 10)
     @load.spritesheet('enemy4', '<%= image_path("enemy4.png") %>', 93, 75)
-    @load.spritesheet('reward4', '<%= image_path("reward4.png") %>', 64, 32, 10)
     @load.spritesheet('enemy5', '<%= image_path("enemy5.png") %>', 32, 174)
-    @load.spritesheet('reward5', '<%= image_path("reward5.png") %>', 64, 32, 10)
     @load.spritesheet('enemy6', '<%= image_path("enemy6.png") %>', 32, 32)
-    @load.spritesheet('reward6', '<%= image_path("reward6.png") %>', 64, 32, 10)
 
     @load.spritesheet('explosion', '<%= image_path("explosion.png") %>', 32, 32, 6)
     @load.spritesheet('explosion2', '<%= image_path("explosion2.png") %>', 64, 64, 7)
     @load.image('deck', '<%= image_path('deck.png') %>')
+    @load.spritesheet('sound', '<%= image_path('sound.png') %>', 24, 24)
+
+    @load.audio('fire', ['<%= audio_path("fire.wav") %>'])
+    @load.audio('burst', ['<%= audio_path("burst.wav") %>'])
+    @load.audio('explosion', ['<%= audio_path("explosion.wav") %>'])
+    @load.audio('explosion2', ['<%= audio_path("explosion2.wav") %>'])
+    @load.audio('damage', ['<%= audio_path("damage.wav") %>'])
 
   create: ->
     @state.start('MainMenu')
@@ -322,7 +324,6 @@ class Game
     @gameTimer.start()
     @setupEnemies()
     @setupExplosions()
-    @setupRewardTexts()
 
     @crosshair = @add.sprite(400, 300, 'crosshair')
     @crosshair.anchor.setTo(0.5, 0.5)
@@ -332,6 +333,7 @@ class Game
     @cursors = @input.keyboard.createCursorKeys()
 
     @setupBullets()
+    @setupAudio()
     @setupDeck()
     @setupText()
 
@@ -343,9 +345,8 @@ class Game
     @land.tilePosition.y += 0.5
     @checkEnemyLevelUp()
 
-    @fire() if @input.activePointer.isDown or @input.keyboard.isDown(Phaser.Keyboard.Z)
-
     @toggleBullets()
+    @fire() if @input.activePointer.isDown or @input.keyboard.isDown(Phaser.Keyboard.Z)
 
     @checkCollision()
     @spawnEnemies()
@@ -389,24 +390,18 @@ class Game
     @explosions.forEach(((explosion) ->
       explosion.animations.add 'explosion'
     ), this)
+    @explosions.setAll('anchor.x', 0.5)
+    @explosions.setAll('anchor.y', 0.5)
 
     @explosions2 = @add.group()
     @explosions2.enableBody = true
     @explosions2.physicsBodyType = Phaser.Physics.ARCADE
-    @explosions2.createMultiple(50, 'explosion2')
+    @explosions2.createMultiple(10, 'explosion2')
     @explosions2.forEach(((explosion) ->
       explosion.animations.add 'explosion'
     ), this)
-
-  setupRewardTexts: ->
-    @rewards = []
-    for i in [0...@ENEMY_TYPES.length]
-      rewards = @add.group()
-      rewards.createMultiple(50, 'reward' + i)
-      rewards.forEach(((reward) ->
-        reward.animations.add 'reward' + i
-      ), this)
-      @rewards.push(rewards)
+    @explosions2.setAll('anchor.x', 0.5)
+    @explosions2.setAll('anchor.y', 0.5)
 
   setupBullets: ->
     @bullets = []
@@ -421,6 +416,13 @@ class Game
       bullets.setAll('outOfBoundsKill', true)
       bullets.setAll('checkWorldBounds', true)
       @bullets.push bullets
+
+  setupAudio: ->
+    @fireSFX = @add.audio('fire')
+    @burstSFX = @add.audio('burst')
+    @explosionSFX = @add.audio('explosion')
+    @explosion2SFX = @add.audio('explosion2')
+    @damageSFX = @add.audio('damage')
 
   setupDeck: ->
     @deck = @add.sprite(0, 520, 'deck')
@@ -448,6 +450,21 @@ class Game
         , this)
       )(@bbtn[i], @bbtnd[i], i, this)
 
+    @soundIcon = @add.sprite(700, 560, 'sound')
+    @soundIcon.anchor.setTo(0.5, 0.5)
+    @soundIcon.animations.add('on', [ 0 ])
+    @soundIcon.animations.add('off', [ 1 ])
+    @soundIcon.play('on')
+    @soundIcon.inputEnabled = true
+    @soundIcon.events.onInputDown.add( ->
+      if @sound.mute
+        @sound.mute = false
+        @soundIcon.play('on')
+      else
+        @sound.mute = true
+        @soundIcon.play('off')
+    , this)
+
   setupText: ->
     @timeText = @add.text(400, 15, '', { font: '20px Army Wide', fill: '#fff' })
     @timeText.anchor.setTo(0.5, 0.5)
@@ -469,21 +486,6 @@ class Game
   #
   # UPDATE functions
   #
-  fire: ->
-    bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
-    ammoReq = @AMMO_REQ[@selectedBullet]
-    if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0)
-      @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet]
-      bullet = bullets.getFirstExists(false)
-      angle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
-      offset = @BULLET_OFFSET[@selectedBullet]
-      bullet.reset(400 + Math.cos(angle) * offset, 525 + Math.sin(angle) * offset)
-      @physics.arcade.moveToObject(bullet, @crosshair, 200)
-      @ammo-= ammoReq
-      @ammoText.text = 'Energy: ' + @ammo
-      if @ammo < 25
-        @ammoText.setStyle({font: '14px Army Wide', fill: "#f22"})
-
   toggleBullets: ->
     if @input.keyboard.isDown(Phaser.Keyboard.ONE) and not (@selectedBullet is 'small')
       @selectedBullet = 'small'
@@ -523,6 +525,22 @@ class Game
 
     turretAngle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
     @turrets[@selectedBullet].rotation = turretAngle unless 0 < turretAngle < Math.PI
+
+  fire: ->
+    bullets = @bullets[@BULLET_TYPES.indexOf(@selectedBullet)]
+    ammoReq = @AMMO_REQ[@selectedBullet]
+    if (@ammo >= ammoReq and @time.now > @nextFire[@selectedBullet] && bullets.countDead() > 0)
+      @nextFire[@selectedBullet] = @time.now + @FIRE_RATE[@selectedBullet]
+      @fireSFX.play()
+      bullet = bullets.getFirstExists(false)
+      angle = @physics.arcade.angleBetween(@turrets[@selectedBullet], @crosshair)
+      offset = @BULLET_OFFSET[@selectedBullet]
+      bullet.reset(400 + Math.cos(angle) * offset, 525 + Math.sin(angle) * offset)
+      @physics.arcade.moveToObject(bullet, @crosshair, 200)
+      @ammo-= ammoReq
+      @ammoText.text = 'Energy: ' + @ammo
+      if @ammo < 25
+        @ammoText.setStyle({font: '14px Army Wide', fill: "#f22"})
 
   checkCollision: ->
     for i in [0...@ENEMY_TYPES.length]
@@ -575,15 +593,19 @@ class Game
     if @time.now > @nextEnemy[3] and @enemies[3].countDead() > 0
       @nextEnemy[3] = @time.now + @enemyRate[3]
       enemy = @enemies[3].getFirstExists(false)
+      start = @rnd.integerInRange(20, 500)
+      end = @rnd.integerInRange(20, 500)
+      enemy.body.velocity.x = 60 + Math.random() * 60
       if Math.random() < 0.5
-        enemy.reset(0, 20 + Math.random() * 320)
-        enemy.body.velocity.x = 60 + Math.random() * 60
-        enemy.rotation = -Math.PI / 2
+        enemy.reset(0, start)
+        enemy.rotation = @physics.arcade.moveToXY(
+          enemy, 800, end, @rnd.integerInRange(60, 120)
+        ) - Math.PI / 2
       else
-        enemy.reset(800, 20 + Math.random() * 320)
-        enemy.body.velocity.x = -(60 + Math.random() * 60)
-        enemy.rotation = Math.PI / 2
-      enemy.body.velocity.y = 30
+        enemy.reset(800, start)
+        enemy.rotation = @physics.arcade.moveToXY(
+          enemy, 0, end, @rnd.integerInRange(60, 120)
+        ) - Math.PI / 2
       enemy.play('fly')
 
     if @time.now > @nextEnemy[4] and @enemies[4].countDead() > 0
@@ -627,43 +649,36 @@ class Game
         b.reset(bullet.x, bullet.y)
         b.body.velocity.x = Math.cos(angle + (i * Math.PI * 2 / 5)) * 200
         b.body.velocity.y = Math.sin(angle + (i * Math.PI * 2 / 5)) * 200
+      @burstSFX.play()
 
     bullet.kill()
     if Math.random() < @HIT_RATE[bullet.key][enemy.key]
       i = parseInt(enemy.key.slice(5))
       explosion = switch enemy.key
         when "enemy4", "enemy5", "enemy6"
+          @explosion2SFX.play()
           @explosions2.getFirstExists(false)
         else
+          @explosionSFX.play()
           @explosions.getFirstExists(false)
 
-      x = enemy.body.x
-      y = enemy.body.y
-      switch enemy.key
-        when "enemy2"
-          x += 49
-        when "enemy4"
-          x += 16
-          y += 5
-        when "enemy5"
-          x += 51
-          y -= 16
-        when "enemy6"
-          x -= 16
-          y -= 16
-      
-      explosion.reset(x, y)
+      explosion.reset(enemy.x, enemy.y)
       explosion.body.velocity.x = enemy.body.velocity.x
       explosion.body.velocity.y = enemy.body.velocity.y
       enemy.kill()
       explosion.play('explosion', 15, false, true)
 
-      reward = @rewards[i].getFirstExists(false)
-      switch enemy.key
-        when "enemy4", "enemy5", "enemy6"
-          y += 16
-      reward.reset(x, y)
-      reward.play('reward' + i, 30, false, true)
+      reward = @add.text(enemy.x, enemy.y, "#{@REWARD[enemy.key]}", { font: '16px Army Wide', fill: '#fff' })
+      reward.anchor.setTo(0.5, 0.5)
+      rise = @add.tween(reward)
+      rise.to({ y: enemy.y - 16 }, 250)
+      fade = @add.tween(reward)
+      fade.to({ y: enemy.y - 64, alpha: 0 })
+      rise.chain(fade)
+      fade.onComplete.add(->
+        this.destroy()
+      , reward)
+      rise.start()
       @ammo += @REWARD[enemy.key]
       @ammoText.text = 'Energy: ' + @ammo
       if @ammo > 25
@@ -672,6 +687,8 @@ class Game
       @killText.text = "Kills: " + @kills
     else
       enemy.play('hit')
+      @damageSFX.play()
+
   checkEnemyLevelUp: ->
     if @kills >= @nextEnemyLvlUp
       @levelUpEnemy(@nextEnemyLvlUp)
