@@ -4,7 +4,7 @@
     %meta{:charset => "utf-8"}/
     %meta{:content => "IE=Edge,chrome=1", "http-equiv" => "X-UA-Compatible"}/
     %meta{:content => "width=device-width, initial-scale=1.0", :name => "viewport"}/
-    %title Gunner v0.21
+    %title Gunner v0.30
     %meta{:content => "Shoot down endless waves of enemies", :name => "description"}/
     %meta{:content => "Gunner", :property => "og:title"}/
     %meta{:content => "Shoot down endless waves of enemies", :property => "og:description"}/
@@ -19,6 +19,7 @@
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
   %body
     #game-container
+    #orientation This game works best when rotated to portrait mode
     %script{:type => "text/javascript", :src => javascript_path("app")}
     - if ENV['RACK_ENV'] == 'production'
       / Piwik
@@ -36,4 +37,21 @@
       %noscript
         %p
           %img{:alt => "", :src => "http://analytics.bryanbibat.net/piwik.php?idsite=12", :style => "border:0;"}/
-      / End Piwik Code
+    / End Piwik Code
+    %script{:type => "text/javascript", :src => javascript_path("stats.min")}
+    :javascript
+      var stats = new Stats();
+
+      stats.setMode(0);
+
+      stats.domElement.style.position = 'absolute';
+      stats.domElement.style.left = '0px';
+      stats.domElement.style.top = '0px';
+
+      document.body.appendChild(stats.domElement);
+
+      setInterval(function () {
+        stats.begin();
+        stats.end();
+      }, 1000 / 60);
+
