@@ -1,0 +1,50 @@
+
+class Boot
+  constructor: (game) ->
+  preload: ->
+    if navigator.isCocoonJS
+      cocoonjsphaser.utils.fixDOMParser()
+    @load.image('preloaderBar', '<%= image_path('preloader_bar.png') %>')
+    @load.bitmapFont('SpecialElite32', '<%= font_path('SpecialElite32.png') %>', (if navigator.isCocoonJS then '<%= font_path('SpecialElite32.json') %>' else '<%= font_path('SpecialElite32.xml') %>'))
+  create: ->
+    @input.maxPointers = 2
+    @stage.disableVisibilityChange = false
+    if @game.device.desktop
+      @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
+      @scale.minWidth = 480
+      @scale.minHeight = 360
+      @scale.maxWidth = 800
+      @scale.maxHeight = 600
+      @scale.pageAlignHorizontally = true
+      @scale.pageAlignVertically = true
+      @scale.setScreenSize true
+    else
+      @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
+      @scale.minWidth = 480
+      @scale.minHeight = 360
+      @scale.maxWidth = 800
+      @scale.maxHeight = 600
+      @scale.pageAlignHorizontally = true
+      @scale.pageAlignVertically = true
+      @scale.forceOrientation true, false
+      @scale.hasResized.add @gameResized, this
+      @scale.enterIncorrectOrientation.add @enterIncorrectOrientation, this
+      @scale.leaveIncorrectOrientation.add @leaveIncorrectOrientation, this
+      @scale.setScreenSize true
+    @state.start('Preloader')
+
+  gameResized: (width, height) ->
+    # This could be handy if you need to do any extra processing if the game resizes.
+    # A resize could happen if for example swapping orientation on a device.
+    
+  enterIncorrectOrientation: ->
+    @game.orientated = false
+    document.getElementById("orientation").style.display = "block"
+    return
+
+  leaveIncorrectOrientation: ->
+    @game.orientated = true
+    document.getElementById("orientation").style.display = "none"
+    return
+
+window.Gunner.Boot = Boot
