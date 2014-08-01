@@ -12,6 +12,7 @@ class Preloader
     @background = @add.sprite(0, 0, 'preloaderBG')
     @preloaderBar = @add.sprite(300, 300, 'preloaderBar')
 
+    @game.add.text(400, 545, '', { font: '14px Army Wide', fill: '#fff' })
     @load.setPreloadSprite(@preloaderBar)
 
     @load.image('sea', '<%= image_path('sea.png') %>')
