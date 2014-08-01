@@ -6,5 +6,5 @@ end
 guard 'livereload' do
   watch(%r{views/.+\.(erb|haml|slim)$})
   watch(%r{assets/javascripts/.+\.(js|coffee|erb)$})
-  watch(%r{assets/stylesheets/.+\.(css)$})
+  watch(%r{assets/stylesheets/.+\.(css|scss)$})
 end
