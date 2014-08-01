@@ -15,6 +15,8 @@
 
 * {
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
@@ -100,6 +102,6 @@ a {
 }
 
 #game-container canvas {
-  margin: 0px auto 30px;
+  margin: 0px auto;
 }
 
