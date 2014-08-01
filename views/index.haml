@@ -4,13 +4,15 @@
     %meta{:charset => "utf-8"}/
     %meta{:content => "IE=Edge,chrome=1", "http-equiv" => "X-UA-Compatible"}/
     %meta{:content => "width=device-width, initial-scale=1.0", :name => "viewport"}/
-    %title Gunner v0.35
-    %meta{:content => "Shoot down endless waves of enemies", :name => "description"}/
+    %title Gunner v0.36
+    %meta{:content => "Destroy waves of enemies in this HTML5 game", :name => "description"}/
     %meta{:content => "Gunner", :property => "og:title"}/
-    %meta{:content => "Shoot down endless waves of enemies", :property => "og:description"}/
+    %meta{:content => "Destroy waves of enemies in this HTML5 game", :property => "og:description"}/
     %meta{:content => "website", :property => "og:type"}/
     %meta{:content => "http://datenshizero.github.io/gunner/", :property => "og:url"}/
     %meta{:content => image_path("opengraph.png"), :property => "og:image"}/
+    %meta{:content => "200", :property => "og:image:width"}/
+    %meta{:content => "200", :property => "og:image:height"}/
     %link{:href => image_path('favicon.ico'), :rel => "shortcut icon"}/
     %link{:rel => "stylesheet", :href => stylesheet_path('app') }
 
@@ -43,7 +45,6 @@
     %script{:type => "text/javascript", :src => javascript_path("stats.min")}
     :javascript
       var stats = new Stats();
-
       stats.setMode(0);
 
       stats.domElement.style.position = 'absolute';
