@@ -18,7 +18,10 @@
       :css
         body { margin: 0; background-color: #222 }
         #orientation { display: none; color: white }
-    %script{:type => "text/javascript", :src => javascript_path("app")}
+    - unless @mobile
+      %script{:type => "text/javascript", :src => javascript_path("app")}
+    - else
+      %script{:type => "text/javascript", :src => javascript_path("mobile")}
   %body
     - unless @cocoon
       #orientation This game works best when rotated to landscape mode

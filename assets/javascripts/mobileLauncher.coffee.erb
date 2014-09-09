@@ -1,0 +1,13 @@
+Gunner = window.Gunner
+
+game = new Phaser.Game(800, 600, Phaser.CANVAS, '')
+game.state.add('Boot', Gunner.Boot)
+game.state.add('Preloader', Gunner.Preloader)
+game.state.add('MainMenu', Gunner.MainMenu)
+game.state.add('Game', Gunner.Game)
+
+game.state.start('Boot')
+
+<% unless ENV['RACK_ENV'] == 'production' %>
+window.game = game
+<% end %>

@@ -13,8 +13,8 @@ class Boot
       @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
       @scale.minWidth = 400
       @scale.minHeight = 300
-      @scale.maxWidth = 800
-      @scale.maxHeight = 600
+      @scale.maxWidth = 1024
+      @scale.maxHeight = 768
       @scale.pageAlignHorizontally = true
       @scale.pageAlignVertically = true
       @scale.setScreenSize true
@@ -22,12 +22,12 @@ class Boot
       @scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
       @scale.minWidth = 400
       @scale.minHeight = 300
-      @scale.maxWidth = 800
-      @scale.maxHeight = 600
+      @scale.maxWidth = 1024
+      @scale.maxHeight = 768
       @scale.pageAlignHorizontally = true
       @scale.pageAlignVertically = true
       @scale.forceOrientation true, false
-      @scale.hasResized.add @gameResized, this
+      @scale.setResizeCallback @gameResized, this
       @scale.enterIncorrectOrientation.add @enterIncorrectOrientation, this
       @scale.leaveIncorrectOrientation.add @leaveIncorrectOrientation, this
       @scale.setScreenSize true
