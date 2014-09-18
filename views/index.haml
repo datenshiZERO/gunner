@@ -22,6 +22,8 @@
       %script{:type => "text/javascript", :src => javascript_path("app")}
     - else
       %script{:type => "text/javascript", :src => javascript_path("mobile")}
+    - unless ENV['RACK_ENV'] == 'production'
+      %script{:type => "text/javascript", :src => javascript_path("phaser-debug")}
   %body
     - unless @cocoon
       #orientation This game works best when rotated to landscape mode

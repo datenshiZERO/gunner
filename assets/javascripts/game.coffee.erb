@@ -13,6 +13,9 @@ class Game
     return
 
   create: ->
+<% unless ENV['RACK_ENV'] == 'production' %>
+    @add.plugin(Phaser.Plugin.Debug)
+<% end %>
     @canFire = true
     @enemySpawners = {}
     @enemyLvlUpExpire = 0
@@ -347,7 +350,7 @@ class Game
     @killText = @add.bitmapText(635, @barHeight - 9, 'SpecialEliteOutline14', "Kills: 0", 14)
 
     @enemyLvlUpText = @add.bitmapText(400, 250, 'SpecialElite32', '', 24)
-    Gunner.center(@enemyLvlUpText)
+    @enemyLvlUpHint = @add.bitmapText(400, 285, 'SpecialElite32', '', 20)
 
   adjustEnergyBar: ->
     @energyText.text = 'Energy: ' + @energy
@@ -767,6 +770,10 @@ class Game
       when "setMaxCount"
         @setMaxCount(action[1], action[2])
     Gunner.center(@enemyLvlUpText)
+    if Gunner.ENEMY_LVL_CHART[kills].hint?
+      @enemyLvlUpHint.text = Gunner.ENEMY_LVL_CHART[kills].hint
+      Gunner.center(@enemyLvlUpHint)
+      @setLvlUpHintExpire()
 
     @previousLvlUp = @nextEnemyLvlUp if @nextEnemyLvlUp?
     @nextEnemyLvlUp = Gunner.ENEMY_LVL_CHART[kills].next
@@ -800,6 +807,11 @@ class Game
   setLvlUpExpire: ->
     @time.events.add(Phaser.Timer.SECOND * 5, ->
       @enemyLvlUpText.text = ""
+    , this)
+
+  setLvlUpHintExpire: ->
+    @time.events.add(Phaser.Timer.SECOND * 15, ->
+      @enemyLvlUpHint.text = ""
     , this)
 
   setSpriteInfo: (enemyIdx) ->

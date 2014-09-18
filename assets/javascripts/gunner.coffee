@@ -11,6 +11,7 @@ window.Gunner = {
     0:
       action: ["unlock", RKE_FIGHTER, 1000, 20]
       next: 20
+      hint: "Aim carefully. Don't waste your energy spraying the enemy."
     20:
       action: ["setSpawnRate", RKE_FIGHTER, 600]
       next: 50
@@ -29,6 +30,7 @@ window.Gunner = {
     300:
       action: ["setSpawnRate", REG_FIGHTER, 1700]
       next: 400
+      hint: "Use TRIPLE to clear clumps of enemies."
     400:
       action: ["setSpawnRate", RKE_FIGHTER, 300]
       next: 500
@@ -41,6 +43,7 @@ window.Gunner = {
     1000:
       action: ["setSpawnRate", REG_FIGHTER, 1200]
       next: 1250
+      hint: "Use LARGE shots to take down tough enemies like subs."
     1250:
       action: ["setSpawnRate", RKE_FIGHTER, 250]
       next: 1500
@@ -56,6 +59,7 @@ window.Gunner = {
     2250:
       action: ["setMaxCount", RKE_FIGHTER, 60]
       next: 2500
+      hint: "TRIPLE + LARGE is effective against Veteran (blue) enemies."
     2500:
       action: ["setMaxCount", REG_FIGHTER, 30]
       next: 2750
@@ -68,6 +72,7 @@ window.Gunner = {
     3250:
       action: ["setMaxCount", RKE_FIGHTER, 80]
       next: 3500
+      hint: "Use BOMB when your line of fire is blocked."
     3500:
       action: ["setSpawnRate", REG_FIGHTER, 800]
       next: 3750
@@ -77,6 +82,7 @@ window.Gunner = {
     4000:
       action: ["unlock", BOMBER, 10000, 10]
       next: 4250
+      hint: "TRIPLE + BURST is good against bombers."
     4250:
       action: ["setSpawnRate", VET_FIGHTER, 5000]
       next: 4500
@@ -95,6 +101,7 @@ window.Gunner = {
     5500:
       action: ["setMaxCount", REG_FIGHTER, 50]
       next: 5750
+      hint: "BOMB + BURST is good for clearing the screen."
     5750:
       action: ["setSpawnRate", VET_FIGHTER, 4000]
       next: 6000
