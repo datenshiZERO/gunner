@@ -5,6 +5,7 @@ gem 'sinatra-asset-pipeline'
 gem 'haml'
 gem 'puma'
 gem 'uglifier'
+gem 'mina'
 
 group :development do
   gem 'guard'
