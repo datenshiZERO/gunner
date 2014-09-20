@@ -10,12 +10,11 @@ require 'mina/git'
 #   branch       - Branch name to deploy. (needed by mina/git)
 
 set :domain, 'games.bryanbibat.net'
-set :deploy_to, '/home/deploy/'
+set :deploy_to, '/home/deploy/habagat'
 set :repository, 'https://github.com/datenshiZERO/gunner.git'
 set :branch, 'master'
 
 set :user, 'deploy'    # Username in the server to SSH to.
-set :shared_paths, ['bundle', 'public/assets']
 
 # This task is the environment that is loaded for most commands, such as
 # `mina deploy` or `mina rake`.
@@ -33,9 +32,8 @@ end
 # For Rails apps, we'll make some of the shared paths that are shared between
 # all releases.
 task :setup => :environment do
-  queue "ln -s #{deploy_to}/shared/public/assets /home/deploy/games/assets/habagat"
-
-  queue  "bundle install --path bundle --deployment --quiet --without development test"
+  queue "mkdir -p /home/deploy/habagat"
+  queue "mkdir -p /home/deploy/games/assets"
 end
 
 desc "Deploys the current version to the server."
@@ -44,11 +42,11 @@ task :deploy => :environment do
     # Put things that will set up an empty directory into a fully set-up
     # instance of your project.
     invoke :'git:clone'
-    invoke :'deploy:link_shared_paths'
     invoke :'bundle:install'
 
     to :launch do
       queue "bundle exec rake assets:precompile"
+      queue "ln -s #{deploy_to}/#{current_path}/public/assets /home/deploy/games/assets/habagat"
       queue "bundle exec ruby generator.rb"
       queue "ln -s #{deploy_to}/#{current_path}/public /home/deploy/games/habagat"
     end

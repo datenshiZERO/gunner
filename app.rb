@@ -4,11 +4,11 @@ require 'sinatra/asset_pipeline'
 
 class App < Sinatra::Base
   set :assets_precompile, %w(app.js mobile.js app.css *.png *.jpg *.svg *.eot *.ttf *.woff *.ogg *.mp3 *.json *.xml)
-  #set :assets_host, 'datenshizero.github.io'
+  set :assets_host, 'game-assets.karaniwan.org'
   set :assets_css_compressor, :sass
   set :assets_js_compressor, :uglifier
 
-  #Sprockets::Helpers.prefix = "/gunner/assets"
+  Sprockets::Helpers.prefix = "/habagat"
   register Sinatra::AssetPipeline
 
   get '/' do
