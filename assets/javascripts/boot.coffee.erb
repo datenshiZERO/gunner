@@ -2,6 +2,9 @@
 class Boot
   constructor: (game) ->
   preload: ->
+    <% if ENV['RACK_ENV'] == 'production' %>
+    @load.crossOrigin = 'http://games.bryanbibat.net'
+    <% end %>
     if navigator.isCocoonJS
       cocoonjsphaser.utils.fixDOMParser()
     @load.image('preloaderBar', '<%= image_path('preloader_bar.png') %>')

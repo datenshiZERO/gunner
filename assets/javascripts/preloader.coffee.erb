@@ -1,12 +1,12 @@
 class Preloader
   constructor: (game) ->
   preload: ->
-    @preloaderBar = @add.sprite(400, 300, 'preloaderBar')
-    @preloaderBar.anchor.setTo(0.5, 0.5)
-    window.Gunner.horizontalCenter(@add.bitmapText(400, 245, 'SpecialElite32', 'Loading...', 32))
     <% if ENV['RACK_ENV'] == 'production' %>
     @load.crossOrigin = 'http://games.bryanbibat.net'
     <% end %>
+    @preloaderBar = @add.sprite(400, 300, 'preloaderBar')
+    @preloaderBar.anchor.setTo(0.5, 0.5)
+    window.Gunner.horizontalCenter(@add.bitmapText(400, 245, 'SpecialElite32', 'Loading...', 32))
     @load.setPreloadSprite(@preloaderBar)
 
     @load.atlas('assets', '<%= image_path('atlas.png') %>', '<%= image_path('atlas.json') %>')
