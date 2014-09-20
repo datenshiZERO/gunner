@@ -46,9 +46,9 @@ task :deploy => :environment do
 
     to :launch do
       queue "bundle exec rake assets:precompile"
-      queue "ln -s #{deploy_to}/#{current_path}/public/assets /home/deploy/games/assets/habagat"
+      queue "ln -sf #{deploy_to}/#{current_path}/public/assets /home/deploy/games/assets/habagat"
       queue "bundle exec ruby generator.rb"
-      queue "ln -s #{deploy_to}/#{current_path}/public /home/deploy/games/habagat"
+      queue "ln -sf #{deploy_to}/#{current_path}/public /home/deploy/games/habagat"
     end
   end
 end
