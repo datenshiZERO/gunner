@@ -5,7 +5,7 @@ class Preloader
     @preloaderBar.anchor.setTo(0.5, 0.5)
     window.Gunner.horizontalCenter(@add.bitmapText(400, 245, 'SpecialElite32', 'Loading...', 32))
     <% if ENV['RACK_ENV'] == 'production' %>
-    @load.crossOrigin = 'anonymous'
+    @load.crossOrigin = ''
     <% end %>
     @load.setPreloadSprite(@preloaderBar)
 
