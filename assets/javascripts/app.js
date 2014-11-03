@@ -1,5 +1,6 @@
 //= require 'cocoon'
 //= require 'phaser'
+//= require 'phaser-debug'
 //= require 'persist'
 //= require 'gunner'
 //= require 'boot'

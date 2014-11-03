@@ -4,6 +4,8 @@ class Boot
   preload: ->
     <% if ENV['RACK_ENV'] == 'production' %>
     @load.crossOrigin = 'http://games.bryanbibat.net'
+    <% else %>
+    game.add.plugin(Phaser.Plugin.Debug)
     <% end %>
     if navigator.isCocoonJS
       cocoonjsphaser.utils.fixDOMParser()

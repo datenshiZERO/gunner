@@ -74,10 +74,15 @@ class Game
     @shareImages = []
 
     @levelUpEnemy(0)
-    @time.advancedTiming = true
 
-    @versionText = @add.bitmapText(10, 480, 'SpecialEliteOutline14', 'v0.51', 14)
+
+    <% unless ENV['RACK_ENV'] == 'production' %>
+    @time.advancedTiming = true
     @fpsText = @add.bitmapText(10, 498, 'SpecialEliteOutline14', 'fps', 14)
+    @versionText = @add.bitmapText(10, 480, 'SpecialEliteOutline14', 'v0.52', 14)
+    <% else %>
+    @versionText = @add.bitmapText(10, 498, 'SpecialEliteOutline14', 'v0.52', 14)
+    <% end %>
 
     return
 
@@ -105,7 +110,9 @@ class Game
         @timeText.text = Gunner.timeDisplay(@drainCounter.duration)
 
     Gunner.center(@timeText)
+    <% unless ENV['RACK_ENV'] == 'production' %>
     @fpsText.text = "#{@time.fps} fps"
+    <% end %>
 
     if @delayedAction?
       if @delayedAction is 'restart'
