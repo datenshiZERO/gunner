@@ -317,7 +317,7 @@ class MainMenu
     @addInstructionText 'Credits', 400, 50, true
 
     @addCreditsText 'Copyright (c) 2014 Bryan Bibat.', 50, 100, "http://bryanbibat.net"
-    @addCreditsText 'Made with Phaser 2.0.7', 375, 100, "http://phaser.io"
+    @addCreditsText 'Made with Phaser 2.2.0', 375, 100, "http://phaser.io"
     @addCreditsText 'Sprites (c) 2002 Ari Feldman,', 50, 135, "www.widgetworx.com/spritelib/"
     @addCreditsText 'Sounds (c) 2013 dklon (Devin Watson),', 350, 135, "http://opengameart.org/users/dklon"
     @addCreditsText '"Airborne" font (c) 2005 Charles Casimiro Design,', 50, 170, "http://charlescasimiro.com/airborne.html"
@@ -329,7 +329,7 @@ class MainMenu
     book = @addTypewriterText "Read a book on how to make", 570, 280, 22, 'both', "https://leanpub.com/html5shootemupinanafternoon"
     book2 = @addTypewriterText "HTML5 games like this:", 570, 305, 22, 'both', "https://leanpub.com/html5shootemupinanafternoon"
 
-    url = encodeURIComponent("http://datenshizero.github.io/gunner/")
+    url = encodeURIComponent("http://games.bryanbibat.net/habagat/")
     ogUrl = encodeURIComponent("<%= image_path 'opengraph.png' %>")
     text = encodeURIComponent("Play Gunner, a WWII themed HTML5 game where you destroy waves of enemy planes and ships")
     fullUrl = "https://twitter.com/intent/tweet?url=#{url}&text=#{text}"
