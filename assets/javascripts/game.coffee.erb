@@ -79,9 +79,9 @@ class Game
     <% unless ENV['RACK_ENV'] == 'production' %>
     @time.advancedTiming = true
     @fpsText = @add.bitmapText(10, 498, 'SpecialEliteOutline14', 'fps', 14)
-    @versionText = @add.bitmapText(10, 480, 'SpecialEliteOutline14', 'v0.52', 14)
+    @versionText = @add.bitmapText(10, 480, 'SpecialEliteOutline14', 'v0.53', 14)
     <% else %>
-    @versionText = @add.bitmapText(10, 498, 'SpecialEliteOutline14', 'v0.52', 14)
+    @versionText = @add.bitmapText(10, 498, 'SpecialEliteOutline14', 'v0.53', 14)
     <% end %>
 
     return
