@@ -151,6 +151,7 @@ class Game
     ), this)
     @explosions.setAll('anchor.x', 0.5)
     @explosions.setAll('anchor.y', 0.5)
+    @explosions.setAll('texture.baseTexture.scaleMode', PIXI.scaleModes.NEAREST)
 
     @explosions2 = @add.group()
     @explosions2.enableBody = true
@@ -171,6 +172,7 @@ class Game
       # console.log 'bullet-' + bullet
       bullets.createMultiple(100, 'assets', 'bullet-' + bullet, false)
       bullets.setAll('name', 'bullet-' + bullet)
+      bullets.setAll('texture.baseTexture.scaleMode', PIXI.scaleModes.NEAREST)
       bullets.setAll('anchor.x', 0.5)
       bullets.setAll('anchor.y', 0.5)
       bullets.setAll('outOfBoundsKill', true)
@@ -863,6 +865,7 @@ class Game
 
     @enemies[enemyIdx].setAll('anchor.x', 0.5)
     @enemies[enemyIdx].setAll('anchor.y', 0.5)
+    @enemies[enemyIdx].setAll('texture.baseTexture.scaleMode', PIXI.scaleModes.NEAREST)
 
   pauseGame: ->
     @game.paused = true
